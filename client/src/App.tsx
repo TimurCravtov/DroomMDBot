@@ -188,7 +188,7 @@ export function App() {
           <LocateButton onLocated={setUserLocation} />
         </div>
 
-        <div className={`absolute bottom-10 left-3 z-20 ${hideWhenSearching}`}>
+        <div className={`absolute bottom-4 left-[3.75rem] z-20 ${hideWhenSearching}`}>
           <RoutePicker
             routes={routes}
             selectedRouteIds={routeIds}

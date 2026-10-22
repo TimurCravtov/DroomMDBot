@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { MAP_STYLES, type MapStyleId } from '../map/mapStyles';
-import { mutedText, surface } from './ui';
+import { mutedText, roundButton, surface } from './ui';
 
 interface Props {
   /** The base map in use; its provider's credit line is shown first. */
@@ -13,7 +13,7 @@ const withBlankLinks = (html: string) => html.replace(/<a /g, '<a target="_blank
 const linkClass = '[&_a]:underline [&_a]:underline-offset-2';
 
 /**
- * A tiny © in the corner that opens the credits for everything on the map: the base
+ * A round © button in the corner, the size of the other map buttons, that opens the credits for everything on the map: the base
  * map tiles, the transit feed, addresses, walking routes and the map library. Open
  * data licences require these credits to be visible, so they live here rather than
  * being removed.
@@ -35,19 +35,19 @@ export function MapCredits({ mapStyleId }: Props) {
   const basemap = (style.style.sources.base as { attribution?: string }).attribution ?? '';
 
   return (
-    <div ref={rootRef} className="absolute bottom-1.5 left-3 z-30">
+    <div ref={rootRef} className="absolute bottom-4 left-3 z-30">
       <button
         aria-label="Map data and credits"
         aria-expanded={open}
         title="Map data & credits"
-        className={`rounded-full px-2 text-[11px] leading-5 shadow ${surface}`}
+        className={`${roundButton} text-lg font-medium`}
         onClick={() => setOpen((o) => !o)}
       >
         ©
       </button>
 
       {open && (
-        <div className={`absolute bottom-7 left-0 w-72 rounded-2xl p-4 text-xs shadow-lg ${surface}`}>
+        <div className={`absolute bottom-12 left-0 w-72 rounded-2xl p-4 text-xs shadow-lg ${surface}`}>
           <h2 className="mb-2 text-sm font-semibold">Map data &amp; credits</h2>
           <dl className={`space-y-2 ${linkClass}`}>
             <div>
