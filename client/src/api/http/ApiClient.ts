@@ -1,4 +1,5 @@
 import type { TransportClient } from '../client';
+import { authorizationHeader } from './auth';
 import { distanceMeters, type LatLng } from '../geo';
 import type {
   Arrival,
@@ -15,12 +16,24 @@ import type {
   Vehicle,
 } from '../types';
 
-/** The parts of the transport API that the Go server does not provide. */
+/** Browser-local stand-in used for saved places when the server won't sign the user in. */
 type LocalPart = Pick<TransportClient, 'getSavedPlaces' | 'savePlace' | 'deletePlace' | 'search'>;
 
+/** A failed API call, with the HTTP status so callers can tell "not signed in" apart. */
+class HttpError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
 /**
- * Talks to the Go server (see /server) for live transit data and address lookup.
- * Saved places are delegated to `local`, since they are not transit data.
+ * Talks to the Go server (see /server) for live transit data, address lookup and the
+ * user's saved places. Saved places need a signed-in caller (Telegram, or an anonymous
+ * browser account when the server allows it); if the server answers 401 they fall back to
+ * `local`, so the app still works in a browser the server won't sign in.
  */
 export class ApiClient implements TransportClient {
   private stops?: Promise<Stop[]>;
@@ -92,16 +105,37 @@ export class ApiClient implements TransportClient {
     return () => source.close();
   }
 
-  getSavedPlaces(): Promise<Place[]> {
-    return this.local.getSavedPlaces();
+  async getSavedPlaces(): Promise<Place[]> {
+    try {
+      return await this.json<Place[]>('/me/places', { auth: true });
+    } catch (e) {
+      if (isUnauthorized(e)) return this.local.getSavedPlaces();
+      throw e;
+    }
   }
 
-  savePlace(place: NewPlace): Promise<Place> {
-    return this.local.savePlace(place);
+  async savePlace(place: NewPlace): Promise<Place> {
+    try {
+      return await this.json<Place>('/me/places', { method: 'POST', body: place, auth: true });
+    } catch (e) {
+      if (isUnauthorized(e)) return this.local.savePlace(place);
+      throw e;
+    }
   }
 
-  deletePlace(placeId: string): Promise<void> {
-    return this.local.deletePlace(placeId);
+  async deletePlace(placeId: string): Promise<void> {
+    try {
+      await this.json<void>(`/me/places/${encodeURIComponent(placeId)}`, {
+        method: 'DELETE',
+        auth: true,
+      });
+    } catch (e) {
+      // Not signed in, or the place only ever existed in the local fallback.
+      if (isUnauthorized(e) || (e instanceof HttpError && e.status === 404)) {
+        return this.local.deletePlace(placeId);
+      }
+      throw e;
+    }
   }
 
   planTrip(from: LatLng, to: LatLng): Promise<Itinerary[]> {
@@ -135,9 +169,25 @@ export class ApiClient implements TransportClient {
     };
   }
 
-  private async json<T>(path: string): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${path}`);
-    if (!response.ok) throw new Error(`${path}: ${response.status} ${response.statusText}`);
+  private async json<T>(
+    path: string,
+    options: { method?: string; body?: unknown; auth?: boolean } = {},
+  ): Promise<T> {
+    const headers: Record<string, string> = {};
+    if (options.auth) headers.Authorization = authorizationHeader();
+    if (options.body !== undefined) headers['Content-Type'] = 'application/json';
+
+    const response = await fetch(`${this.baseUrl}${path}`, {
+      method: options.method,
+      headers,
+      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    });
+    if (!response.ok) {
+      throw new HttpError(response.status, `${path}: ${response.status} ${response.statusText}`);
+    }
+    if (response.status === 204) return undefined as T;
     return (await response.json()) as T;
   }
 }
+
+const isUnauthorized = (e: unknown) => e instanceof HttpError && e.status === 401;
