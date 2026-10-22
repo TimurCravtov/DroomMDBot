@@ -1,4 +1,5 @@
 import type { Arrival, Stop } from '../api';
+import { RouteNumber } from './RouteColors';
 import { TypeBadge } from './TypeBadge';
 import { closeButton, mutedText, surface } from './ui';
 import { TbX } from 'react-icons/tb';
@@ -36,7 +37,7 @@ export function ArrivalsPanel({ stop, arrivals, error, onClose }: Props) {
         <ul className="max-h-60 divide-y divide-ink-100 overflow-y-auto dark:divide-ink-700">
           {arrivals.slice(0, 8).map((a) => (
             <li key={a.vehicleId} className="flex items-center gap-3 py-2">
-              <span className="w-10 text-lg font-bold">{a.routeNumber}</span>
+              <RouteNumber routeId={a.routeId} number={a.routeNumber} type={a.type} />
               <TypeBadge type={a.type} />
               <span className="ml-auto font-medium tabular-nums">{formatEta(a.etaSeconds)}</span>
             </li>

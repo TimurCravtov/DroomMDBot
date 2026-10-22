@@ -1,4 +1,3 @@
-import type { ExpressionSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '../map/setupMapLibre';
 import { useEffect, useMemo, useState } from 'react';
@@ -12,8 +11,10 @@ import {
 } from 'react-map-gl/maplibre';
 import type { Place, Route, Stop, TransportType, Vehicle } from '../api';
 import { MAP_STYLES, type MapStyleId } from '../map/mapStyles';
+import { readableTextColor } from '../map/routeColors';
 import type { UserLocation } from '../map/types';
 import { PlaceIcon } from './PlaceIcon';
+import { useRouteColors } from './RouteColors';
 import { TypeIcon } from './TypeBadge';
 import { TYPE_COLOR } from './typeStyles';
 
@@ -33,18 +34,6 @@ const STOPS_MIN_ZOOM = 13.5;
 
 const STOPS_LAYER = 'stops';
 const VEHICLE_LAYER = 'vehicle-dots';
-
-const typeColorExpression: ExpressionSpecification = [
-  'match',
-  ['get', 'type'],
-  'trolleybus',
-  TYPE_COLOR.trolleybus,
-  'bus',
-  TYPE_COLOR.bus,
-  'minibus',
-  TYPE_COLOR.minibus,
-  '#737373',
-];
 
 interface Props {
   stops: Stop[];
@@ -138,6 +127,8 @@ export function TransitMap({
   const [overStop, setOverStop] = useState(false);
 
   const routesById = useMemo(() => new Map(routes.map((r) => [r.id, r])), [routes]);
+  const routeColors = useRouteColors();
+  const colorOf = (route: Route) => routeColors[route.id] ?? TYPE_COLOR[route.type];
 
   // Thousands of stops and hundreds of vehicles are drawn as map layers, not DOM markers.
   const stopsGeoJson = useMemo(
@@ -161,13 +152,17 @@ export function TransitMap({
         return [
           {
             type: 'Feature' as const,
-            properties: { type: route.type satisfies TransportType, vehicleId: v.id },
+            properties: {
+              type: route.type satisfies TransportType,
+              vehicleId: v.id,
+              color: routeColors[route.id] ?? TYPE_COLOR[route.type],
+            },
             geometry: { type: 'Point' as const, coordinates: [v.lng, v.lat] as LngLat },
           },
         ];
       }),
     }),
-    [vehicles, routesById],
+    [vehicles, routesById, routeColors],
   );
 
   const drawnRoutes = selectedRoutes.filter((r) => routePaths[r.id]?.length);
@@ -241,7 +236,7 @@ export function TransitMap({
             type="line"
             layout={{ 'line-cap': 'round', 'line-join': 'round' }}
             paint={{
-              'line-color': TYPE_COLOR[route.type],
+              'line-color': colorOf(route),
               'line-width': 4,
               'line-opacity': 0.6,
             }}
@@ -306,7 +301,7 @@ export function TransitMap({
           layout={{ visibility: closeEnough ? 'none' : 'visible' }}
           paint={{
             'circle-radius': 5.5,
-            'circle-color': typeColorExpression,
+            'circle-color': ['get', 'color'],
             'circle-stroke-color': '#ffffff',
             'circle-stroke-width': 2,
           }}
@@ -321,8 +316,8 @@ export function TransitMap({
           <Marker key={v.id} longitude={v.lng} latitude={v.lat} style={{ zIndex: 10 }}>
             <button
               title={`Show route ${route.number}`}
-              style={{ background: TYPE_COLOR[route.type] }}
-              className="flex items-center gap-1 rounded-full border-2 border-white px-2 py-1 text-xs font-bold text-white shadow-md"
+              style={{ background: colorOf(route), color: readableTextColor(colorOf(route)) }}
+              className="flex items-center gap-1 rounded-full border-2 border-white px-2 py-1 text-xs font-bold shadow-md"
               onClick={(e) => {
                 e.stopPropagation(); // don't also click the map underneath
                 onSelectVehicle(v);

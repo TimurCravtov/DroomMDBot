@@ -3,6 +3,7 @@ import { TbArrowLeft, TbMap2, TbMapPin, TbPlus, TbSearch, TbX } from 'react-icon
 import type { Place, Route, StopSearchResult, TransportType } from '../api';
 import { useSearch } from '../hooks/useTransport';
 import { PlaceIcon } from './PlaceIcon';
+import { RouteNumber } from './RouteColors';
 import { TypeBadge, TYPE_LABEL } from './TypeBadge';
 import { TypeFilter } from './TypeFilter';
 import { closeButton, hoverRow, mutedText, surface } from './ui';
@@ -265,7 +266,7 @@ export function SearchBar({
                     className={`flex w-full items-center gap-3 px-4 py-3 text-left ${hoverRow}`}
                     onClick={() => pick(() => onSelectRoute(r.id))}
                   >
-                    <span className="w-10 text-lg font-bold">{r.number}</span>
+                    <RouteNumber routeId={r.id} number={r.number} type={r.type} />
                     <TypeBadge type={r.type} />
                     <span className={`truncate text-sm ${mutedText}`}>{r.name}</span>
                   </button>

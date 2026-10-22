@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { TbCheck, TbRoute } from 'react-icons/tb';
 import type { Route, TransportType } from '../api';
+import { RouteNumber } from './RouteColors';
 import { TypeBadge } from './TypeBadge';
 import { TypeFilter } from './TypeFilter';
 import { hoverRow, mutedText, roundButton, surface } from './ui';
@@ -85,7 +86,7 @@ export function RoutePicker({ routes, selectedRouteIds, onChange }: Props) {
                     className={`flex w-full items-center gap-3 px-4 py-2.5 text-left ${hoverRow}`}
                     onClick={() => toggle(r.id)}
                   >
-                    <span className="w-9 text-lg font-bold">{r.number}</span>
+                    <RouteNumber routeId={r.id} number={r.number} type={r.type} />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm">{r.name}</span>
                       <span className="mt-0.5 block">

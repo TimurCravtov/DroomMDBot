@@ -1,5 +1,6 @@
 import { TbX } from 'react-icons/tb';
 import type { Route } from '../api';
+import { RouteNumber } from './RouteColors';
 import { TypeBadge, TypeIcon } from './TypeBadge';
 import { closeButton, mutedText, surface } from './ui';
 
@@ -22,14 +23,14 @@ export function SelectedRoutes({ routes, onRemove, onClear }: Props) {
         >
           {single ? (
             <>
-              <span className="font-bold">{r.number}</span>
+              <RouteNumber routeId={r.id} number={r.number} type={r.type} />
               <TypeBadge type={r.type} />
               <span className={mutedText}>{r.name}</span>
             </>
           ) : (
             <>
               <TypeIcon type={r.type} className="h-4 w-4" />
-              <span className="font-bold">{r.number}</span>
+              <RouteNumber routeId={r.id} number={r.number} type={r.type} />
             </>
           )}
           <button
