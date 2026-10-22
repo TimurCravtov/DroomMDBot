@@ -132,13 +132,18 @@ export function PickLocation({ purpose, onConfirm, onCancel }: Props) {
               {suggestionsOpen && suggestions.length > 0 && (
                 <ul className={`absolute inset-x-0 bottom-full z-10 mb-1 overflow-hidden rounded-xl shadow-lg ${surface}`}>
                   {suggestions.map((s) => (
-                    <li key={s.label}>
+                    <li key={`${s.label}-${s.lat}-${s.lng}`}>
                       <button
                         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-ink-100 dark:hover:bg-ink-700"
                         onClick={() => chooseAddress(s)}
                       >
                         <TbMapPin className="h-4 w-4 shrink-0 text-ink-400" />
-                        <span className="truncate">{s.label}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate">{s.label}</span>
+                          {s.detail && (
+                            <span className={`block truncate text-xs ${mutedText}`}>{s.detail}</span>
+                          )}
+                        </span>
                       </button>
                     </li>
                   ))}

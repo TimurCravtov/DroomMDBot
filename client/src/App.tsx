@@ -158,6 +158,16 @@ export function App() {
           onRoutesChange={setRouteIds}
           onSelectStop={selectStop}
           onSelectPlace={focusPlace}
+          onSelectLocation={(l) =>
+            focusPlace({
+              id: 'pin',
+              kind: 'pin',
+              label: l.label,
+              address: l.detail,
+              lat: l.lat,
+              lng: l.lng,
+            })
+          }
           onShortcut={handleShortcut}
           onSelectRoute={(id) => setRouteIds([id])}
         />

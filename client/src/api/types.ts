@@ -65,6 +65,8 @@ export type NewPlace = Omit<Place, 'id'>;
 
 export interface GeocodeResult {
   label: string;
+  /** Secondary line, e.g. the district and city. */
+  detail?: string;
   lat: number;
   lng: number;
 }

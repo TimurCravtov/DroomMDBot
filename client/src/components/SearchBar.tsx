@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { TbArrowLeft, TbChevronRight, TbMap2, TbMapPin, TbPlus, TbSearch, TbX } from 'react-icons/tb';
-import type { Place, Route, StopSearchResult, TransportType } from '../api';
-import { useSearch } from '../hooks/useTransport';
+import type { GeocodeResult, Place, Route, StopSearchResult, TransportType } from '../api';
+import { useGeocode, useSearch } from '../hooks/useTransport';
 import { PlaceIcon } from './PlaceIcon';
 import { RouteChecklistItems, toggleRoute } from './RouteChecklist';
 import { RouteNumber } from './RouteColors';
@@ -26,6 +26,8 @@ interface Props {
   onSelectStop: (stopId: string) => void;
   onSelectRoute: (routeId: string) => void;
   onSelectPlace: (place: Place) => void;
+  /** A place or address found by the geocoder. */
+  onSelectLocation: (location: GeocodeResult) => void;
   onShortcut: (shortcut: SearchShortcut) => void;
 }
 
@@ -87,6 +89,7 @@ export function SearchBar({
   onSelectStop,
   onSelectRoute,
   onSelectPlace,
+  onSelectLocation,
   onShortcut,
 }: Props) {
   const [query, setQuery] = useState('');
@@ -97,6 +100,7 @@ export function SearchBar({
   const inputRef = useRef<HTMLInputElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const { data, loading } = useSearch(query);
+  const locations = useGeocode(query);
 
   const hasQuery = query.trim() !== '';
   const showResults = expanded && hasQuery;
@@ -185,6 +189,7 @@ export function SearchBar({
                 if (routes[0]) pick(() => onSelectRoute(routes[0].id));
                 else if (stops[0]) pick(() => onSelectStop(stops[0].id));
                 else if (foundPlaces[0]) pick(() => onSelectPlace(foundPlaces[0]));
+                else if (locations[0]) pick(() => onSelectLocation(locations[0]));
               }
             }}
           />
@@ -325,7 +330,7 @@ export function SearchBar({
         <div className="mx-auto max-w-2xl px-4 pb-8">
           {!data && loading && <p className={`px-4 py-6 text-sm ${mutedText}`}>Searching…</p>}
 
-          {data && allRoutes.length + stops.length + foundPlaces.length === 0 && (
+          {data && allRoutes.length + stops.length + foundPlaces.length + locations.length === 0 && (
             <p className={`px-4 py-6 text-sm ${mutedText}`}>No results for “{query.trim()}”.</p>
           )}
 
@@ -372,6 +377,27 @@ export function SearchBar({
                     <RouteNumber routeId={r.id} number={r.number} type={r.type} />
                     <TypeBadge type={r.type} />
                     <span className={`truncate text-sm ${mutedText}`}>{r.name}</span>
+                  </button>
+                </li>
+              ))}
+            </Section>
+          )}
+
+          {locations.length > 0 && (
+            <Section title={`Addresses and places · ${locations.length}`}>
+              {locations.map((l) => (
+                <li key={`${l.label}-${l.lat}-${l.lng}`}>
+                  <button
+                    className={`flex w-full items-center gap-3 px-4 py-3 text-left ${hoverRow}`}
+                    onClick={() => pick(() => onSelectLocation(l))}
+                  >
+                    <TbMapPin className="h-5 w-5 shrink-0 text-ink-400" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">{l.label}</span>
+                      {l.detail && (
+                        <span className={`block truncate text-xs ${mutedText}`}>{l.detail}</span>
+                      )}
+                    </span>
                   </button>
                 </li>
               ))}

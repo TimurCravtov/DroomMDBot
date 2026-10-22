@@ -12,6 +12,6 @@ export * from './types';
 export function createClient(): TransportClient {
   const mock = new MockEasyWayClient();
   if (import.meta.env.VITE_USE_MOCK === 'true') return mock;
-  // Saved places and address lookup are not served by the transit API, so they stay local.
+  // Saved places are not transit data, so they stay in the browser.
   return new ApiClient(import.meta.env.VITE_API_URL ?? '/api', mock);
 }

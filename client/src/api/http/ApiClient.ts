@@ -15,14 +15,11 @@ import type {
 } from '../types';
 
 /** The parts of the transport API that the Go server does not provide. */
-type LocalPart = Pick<
-  TransportClient,
-  'getSavedPlaces' | 'savePlace' | 'deletePlace' | 'geocode' | 'search'
->;
+type LocalPart = Pick<TransportClient, 'getSavedPlaces' | 'savePlace' | 'deletePlace' | 'search'>;
 
 /**
- * Talks to the Go server (see /server) for live transit data. Saved places and
- * address lookup are delegated to `local`, since they are not transit data.
+ * Talks to the Go server (see /server) for live transit data and address lookup.
+ * Saved places are delegated to `local`, since they are not transit data.
  */
 export class ApiClient implements TransportClient {
   private stops?: Promise<Stop[]>;
@@ -106,8 +103,13 @@ export class ApiClient implements TransportClient {
     return this.local.deletePlace(placeId);
   }
 
-  geocode(query: string): Promise<GeocodeResult[]> {
-    return this.local.geocode(query);
+  async geocode(query: string): Promise<GeocodeResult[]> {
+    if (query.trim().length < 2) return [];
+    try {
+      return await this.json<GeocodeResult[]>(`/geocode?q=${encodeURIComponent(query)}`);
+    } catch {
+      return []; // the geocoder being down shouldn't break typing in the search box
+    }
   }
 
   async describeLocation(lat: number, lng: number): Promise<LocationInfo> {
