@@ -51,12 +51,12 @@ function Chip({
 }) {
   return (
     <button
-      className={`flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-sm shadow-lg ${surface} ${hoverRow}`}
+      className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs shadow-lg ${surface} ${hoverRow}`}
       onClick={onClick}
     >
       {icon}
       <span className="font-medium">{label}</span>
-      {hint && <span className={`text-xs ${mutedText}`}>{hint}</span>}
+      {hint && <span className={mutedText}>{hint}</span>}
     </button>
   );
 }
@@ -177,15 +177,15 @@ export function SearchBar({
         </label>
 
         {expanded && !hasQuery && (
-          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-3 pt-3 [scrollbar-width:none]">
+          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2 pt-2 [scrollbar-width:none]">
             <Chip
-              icon={<PlaceIcon kind="home" />}
+              icon={<PlaceIcon kind="home" className="h-4 w-4" />}
               label="Home"
               hint={home ? undefined : 'Set'}
               onClick={() => pick(() => (home ? onSelectPlace(home) : onShortcut('home')))}
             />
             <Chip
-              icon={<PlaceIcon kind="work" />}
+              icon={<PlaceIcon kind="work" className="h-4 w-4" />}
               label="Work"
               hint={work ? undefined : 'Set'}
               onClick={() => pick(() => (work ? onSelectPlace(work) : onShortcut('work')))}
@@ -193,18 +193,18 @@ export function SearchBar({
             {customPlaces.map((p) => (
               <Chip
                 key={p.id}
-                icon={<PlaceIcon kind="custom" />}
+                icon={<PlaceIcon kind="custom" className="h-4 w-4" />}
                 label={p.label}
                 onClick={() => pick(() => onSelectPlace(p))}
               />
             ))}
             <Chip
-              icon={<TbPlus className="h-5 w-5" />}
+              icon={<TbPlus className="h-4 w-4" />}
               label="Add a place"
               onClick={() => pick(() => onShortcut('add'))}
             />
             <Chip
-              icon={<TbMap2 className="h-5 w-5" />}
+              icon={<TbMap2 className="h-4 w-4" />}
               label="Select on map"
               onClick={() => pick(() => onShortcut('map'))}
             />
