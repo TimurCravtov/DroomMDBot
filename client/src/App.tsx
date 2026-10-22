@@ -1,15 +1,18 @@
 import { useState } from 'react';
 import { ArrivalsPanel } from './components/ArrivalsPanel';
+import { MapControls } from './components/MapControls';
 import { SearchBar } from './components/SearchBar';
 import { TransitMap } from './components/TransitMap';
 import { TYPE_BADGE } from './components/typeStyles';
 import { useArrivals, useRoutes, useStops, useVehicles } from './hooks/useTransport';
+import type { UserLocation } from './map/types';
 
 export function App() {
   const { data: routes = [] } = useRoutes();
   const { data: stops = [] } = useStops();
   const [routeId, setRouteId] = useState<string | null>(null);
   const [stopId, setStopId] = useState<string | null>(null);
+  const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
 
   const vehicles = useVehicles(routeId);
   const { data: arrivals, error } = useArrivals(stopId);
@@ -26,8 +29,13 @@ export function App() {
           vehicles={vehicles}
           selectedStop={selectedStop}
           selectedRoute={selectedRoute}
+          userLocation={userLocation}
           onSelectStop={setStopId}
         />
+      </div>
+
+      <div className="absolute bottom-10 right-3 z-10">
+        <MapControls onLocated={setUserLocation} />
       </div>
 
       {/* Overlays sit above the map canvas and its controls. */}
@@ -60,7 +68,7 @@ export function App() {
       </div>
 
       {selectedStop && (
-        <div className="absolute inset-x-4 bottom-4 z-[1000] sm:right-auto sm:w-80">
+        <div className="absolute bottom-4 left-4 right-20 z-10 sm:right-auto sm:w-80">
           <ArrivalsPanel
             stop={selectedStop}
             arrivals={arrivals}

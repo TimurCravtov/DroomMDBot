@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { Layer, Map as MapGL, Marker, Source, useMap } from 'react-map-gl/maplibre';
 import type { Route, Stop, Vehicle } from '../api';
 import { MAP_STYLES } from '../map/mapStyles';
+import type { UserLocation } from '../map/types';
 import { TYPE_COLOR } from './typeStyles';
 
 type LngLat = [number, number];
@@ -19,6 +20,7 @@ interface Props {
   selectedStop: Stop | null;
   /** When set, the route's path is drawn and framed. */
   selectedRoute: Route | null;
+  userLocation: UserLocation | null;
   onSelectStop: (stopId: string) => void;
 }
 
@@ -65,6 +67,7 @@ export function TransitMap({
   vehicles,
   selectedStop,
   selectedRoute,
+  userLocation,
   onSelectStop,
 }: Props) {
   const stopsById = new Map(stops.map((s) => [s.id, s]));
@@ -129,6 +132,12 @@ export function TransitMap({
           </Marker>
         );
       })}
+
+      {userLocation && (
+        <Marker longitude={userLocation.lng} latitude={userLocation.lat}>
+          <div className="h-4 w-4 rounded-full border-2 border-white bg-blue-600 shadow-md ring-4 ring-blue-600/25" />
+        </Marker>
+      )}
 
       {vehicles.map((v) => {
         const route = routesById.get(v.routeId);
