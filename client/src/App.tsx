@@ -40,6 +40,7 @@ export function App() {
   );
   const [plannedItinerary, setPlannedItinerary] = useState<Itinerary | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [routesOpen, setRoutesOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const { preference: theme, setPreference: setTheme } = useTheme();
   const [mapStyleId, setMapStyleId] = useState<MapStyleId>(loadMapStyleId);
@@ -179,8 +180,14 @@ export function App() {
           <LocateButton onLocated={setUserLocation} />
         </div>
 
-        <div className={`absolute bottom-10 left-3 z-10 ${hideWhenSearching}`}>
-          <RoutePicker routes={routes} selectedRouteIds={routeIds} onChange={setRouteIds} />
+        <div className={`absolute bottom-10 left-3 z-20 ${hideWhenSearching}`}>
+          <RoutePicker
+            routes={routes}
+            selectedRouteIds={routeIds}
+            onChange={setRouteIds}
+            open={routesOpen}
+            onOpenChange={setRoutesOpen}
+          />
         </div>
 
         <div className={`absolute left-4 top-4 z-[1000] ${hideWhenSearching}`}>
@@ -200,6 +207,7 @@ export function App() {
           routes={routes}
           selectedRouteIds={routeIds}
           onRoutesChange={setRouteIds}
+          onViewMoreRoutes={() => setRoutesOpen(true)}
           onSelectStop={selectStop}
           onSelectPlace={focusPlace}
           onSelectLocation={(l) =>

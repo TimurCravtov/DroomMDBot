@@ -10,23 +10,29 @@ interface Props {
   selectedRouteIds: string[];
   /** An empty list shows vehicles from every route. */
   onChange: (routeIds: string[]) => void;
+  /** Whether the panel is showing. Controlled, so the search can open it too. */
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-/** Button that opens a list of routes to toggle on and off, filterable by vehicle type. */
-export function RoutePicker({ routes, selectedRouteIds, onChange }: Props) {
-  const [open, setOpen] = useState(false);
+/**
+ * The Routes button and its panel: a small sheet above the button listing every route,
+ * so the map stays visible. Tapping a route shows it and collapses the panel; a
+ * route's checkbox adds it to a multi-selection and keeps the panel open.
+ */
+export function RoutePicker({ routes, selectedRouteIds, onChange, open, onOpenChange }: Props) {
   const [type, setType] = useState<TransportType | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  // The menu stays open while toggling, so close it on a click elsewhere.
+  // Collapse on a click elsewhere.
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (e: PointerEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+      if (!rootRef.current?.contains(e.target as Node)) onOpenChange(false);
     };
     document.addEventListener('pointerdown', onPointerDown);
     return () => document.removeEventListener('pointerdown', onPointerDown);
-  }, [open]);
+  }, [open, onOpenChange]);
 
   const visible = routes.filter((r) => type === null || r.type === type);
   const noneSelected = selectedRouteIds.length === 0;
@@ -38,7 +44,7 @@ export function RoutePicker({ routes, selectedRouteIds, onChange }: Props) {
         aria-expanded={open}
         title="Routes"
         className={roundButton}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => onOpenChange(!open)}
       >
         <TbRoute className="h-6 w-6" />
       </button>
@@ -50,7 +56,7 @@ export function RoutePicker({ routes, selectedRouteIds, onChange }: Props) {
 
       {open && (
         <div
-          className={`absolute bottom-12 left-0 flex h-[min(28rem,60vh)] w-72 flex-col overflow-hidden rounded-2xl shadow-lg ${surface}`}
+          className={`absolute bottom-12 left-0 z-20 flex h-[min(26rem,45vh)] w-[min(22rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl shadow-lg ${surface}`}
         >
           <TypeFilter
             value={type}
@@ -62,7 +68,10 @@ export function RoutePicker({ routes, selectedRouteIds, onChange }: Props) {
             <li>
               <button
                 className={`flex w-full items-center justify-between px-4 py-2.5 text-left text-sm ${hoverRow}`}
-                onClick={() => onChange([])}
+                onClick={() => {
+                  onChange([]);
+                  onOpenChange(false);
+                }}
               >
                 <span className={noneSelected ? 'font-semibold' : ''}>All routes</span>
                 {noneSelected && <TbCheck className="h-4 w-4" />}
@@ -71,8 +80,11 @@ export function RoutePicker({ routes, selectedRouteIds, onChange }: Props) {
             <RouteChecklistItems
               routes={visible}
               selectedRouteIds={selectedRouteIds}
+              onPick={(id) => {
+                onChange([id]);
+                onOpenChange(false);
+              }}
               onToggle={(id) => onChange(toggleRoute(selectedRouteIds, id))}
-              onPick={(id) => onChange(toggleRoute(selectedRouteIds, id))}
             />
             {visible.length === 0 && (
               <li className={`px-4 py-3 text-sm ${mutedText}`}>No routes of this type.</li>
