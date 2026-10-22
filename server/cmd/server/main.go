@@ -40,6 +40,11 @@ func main() {
 	if cfg.BotToken == "" && !cfg.AllowAnon {
 		log.Print("warning: neither TELEGRAM_BOT_TOKEN nor AUTH_ALLOW_ANON is set, so nobody can sign in to save places")
 	}
+	if cfg.CORSOrigin == "" {
+		log.Print("CORS: off, so only a client on the same origin can call this API (set CORS_ORIGIN if the client is on another domain)")
+	} else {
+		log.Printf("CORS: allowing %s", cfg.CORSOrigin)
+	}
 	if cfg.AllowAnon {
 		log.Print("warning: AUTH_ALLOW_ANON is on: any browser can create an anonymous account (fine for testing)")
 	}
