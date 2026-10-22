@@ -1,4 +1,5 @@
 import 'maplibre-gl/dist/maplibre-gl.css';
+import '../map/setupMapLibre';
 import { useEffect } from 'react';
 import { Layer, Map as MapGL, Marker, Source, useMap } from 'react-map-gl/maplibre';
 import type { Route, Stop, Vehicle } from '../api';
