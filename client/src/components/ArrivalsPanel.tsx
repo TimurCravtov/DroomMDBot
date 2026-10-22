@@ -1,5 +1,5 @@
 import type { Arrival, Stop } from '../api';
-import { TYPE_BADGE } from './typeStyles';
+import { TypeBadge } from './TypeBadge';
 import { closeButton, mutedText, surface } from './ui';
 import { TbX } from 'react-icons/tb';
 
@@ -37,9 +37,7 @@ export function ArrivalsPanel({ stop, arrivals, error, onClose }: Props) {
           {arrivals.slice(0, 8).map((a) => (
             <li key={a.vehicleId} className="flex items-center gap-3 py-2">
               <span className="w-10 text-lg font-bold">{a.routeNumber}</span>
-              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${TYPE_BADGE[a.type]}`}>
-                {a.type}
-              </span>
+              <TypeBadge type={a.type} />
               <span className="ml-auto font-medium tabular-nums">{formatEta(a.etaSeconds)}</span>
             </li>
           ))}
