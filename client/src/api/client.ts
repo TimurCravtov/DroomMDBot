@@ -11,11 +11,11 @@ export interface TransportClient {
   /** Finds routes (by number or name) and stops (by name). */
   search(query: string): Promise<SearchResults>;
   /**
-   * Streams live vehicle positions, optionally filtered to one route.
+   * Streams live vehicle positions, filtered to the given routes (all routes if empty).
    * Emits the current snapshot immediately, then on every update.
    */
   subscribeVehicles(
-    routeId: string | null,
+    routeIds: readonly string[],
     onData: (vehicles: Vehicle[]) => void,
   ): Unsubscribe;
 }

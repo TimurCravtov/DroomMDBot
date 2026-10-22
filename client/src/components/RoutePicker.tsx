@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { TbCheck, TbRoute } from 'react-icons/tb';
 import type { Route, TransportType } from '../api';
 import { TypeBadge } from './TypeBadge';
@@ -7,26 +7,41 @@ import { hoverRow, mutedText, roundButton, surface } from './ui';
 
 interface Props {
   routes: Route[];
-  selectedRouteId: string | null;
-  /** null shows vehicles from every route again. */
-  onSelect: (routeId: string | null) => void;
+  selectedRouteIds: string[];
+  /** An empty list shows vehicles from every route. */
+  onChange: (routeIds: string[]) => void;
 }
 
-/** Button that opens a list of routes, filterable by vehicle type. */
-export function RoutePicker({ routes, selectedRouteId, onSelect }: Props) {
+/** Button that opens a list of routes to toggle on and off, filterable by vehicle type. */
+export function RoutePicker({ routes, selectedRouteIds, onChange }: Props) {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<TransportType | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // The menu stays open while toggling, so close it on a click elsewhere.
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [open]);
 
   const visible = routes.filter((r) => type === null || r.type === type);
-  const choose = (id: string | null) => {
-    onSelect(id);
-    setOpen(false);
-  };
+  const noneSelected = selectedRouteIds.length === 0;
+
+  const toggle = (id: string) =>
+    onChange(
+      selectedRouteIds.includes(id)
+        ? selectedRouteIds.filter((x) => x !== id)
+        : [...selectedRouteIds, id],
+    );
 
   return (
-    <div className="relative">
+    <div ref={rootRef} className="relative">
       <button
-        aria-label="Select route"
+        aria-label="Select routes"
         aria-expanded={open}
         title="Routes"
         className={roundButton}
@@ -34,6 +49,11 @@ export function RoutePicker({ routes, selectedRouteId, onSelect }: Props) {
       >
         <TbRoute className="h-6 w-6" />
       </button>
+      {!noneSelected && (
+        <span className="pointer-events-none absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-ink-900 px-1 text-xs font-semibold text-white ring-2 ring-white dark:bg-white dark:text-ink-900 dark:ring-ink-800">
+          {selectedRouteIds.length}
+        </span>
+      )}
 
       {open && (
         <div
@@ -49,29 +69,42 @@ export function RoutePicker({ routes, selectedRouteId, onSelect }: Props) {
             <li>
               <button
                 className={`flex w-full items-center justify-between px-4 py-2.5 text-left text-sm ${hoverRow}`}
-                onClick={() => choose(null)}
+                onClick={() => onChange([])}
               >
-                <span className={selectedRouteId === null ? 'font-semibold' : ''}>All routes</span>
-                {selectedRouteId === null && <TbCheck className="h-4 w-4" />}
+                <span className={noneSelected ? 'font-semibold' : ''}>All routes</span>
+                {noneSelected && <TbCheck className="h-4 w-4" />}
               </button>
             </li>
-            {visible.map((r) => (
-              <li key={r.id}>
-                <button
-                  className={`flex w-full items-center gap-3 px-4 py-2.5 text-left ${hoverRow}`}
-                  onClick={() => choose(r.id)}
-                >
-                  <span className="w-9 text-lg font-bold">{r.number}</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm">{r.name}</span>
-                    <span className="mt-0.5 block">
-                      <TypeBadge type={r.type} />
+            {visible.map((r) => {
+              const checked = selectedRouteIds.includes(r.id);
+              return (
+                <li key={r.id}>
+                  <button
+                    role="checkbox"
+                    aria-checked={checked}
+                    className={`flex w-full items-center gap-3 px-4 py-2.5 text-left ${hoverRow}`}
+                    onClick={() => toggle(r.id)}
+                  >
+                    <span className="w-9 text-lg font-bold">{r.number}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm">{r.name}</span>
+                      <span className="mt-0.5 block">
+                        <TypeBadge type={r.type} />
+                      </span>
                     </span>
-                  </span>
-                  {r.id === selectedRouteId && <TbCheck className="h-4 w-4 shrink-0" />}
-                </button>
-              </li>
-            ))}
+                    <span
+                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
+                        checked
+                          ? 'border-ink-900 bg-ink-900 text-white dark:border-white dark:bg-white dark:text-ink-900'
+                          : 'border-ink-300 dark:border-ink-600'
+                      }`}
+                    >
+                      {checked && <TbCheck className="h-4 w-4" />}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
             {visible.length === 0 && (
               <li className={`px-4 py-3 text-sm ${mutedText}`}>No routes of this type.</li>
             )}

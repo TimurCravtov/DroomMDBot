@@ -1,10 +1,11 @@
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '../map/setupMapLibre';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Layer, Map as MapGL, Marker, Source, useMap } from 'react-map-gl/maplibre';
 import type { Route, Stop, Vehicle } from '../api';
 import { MAP_STYLES, type MapStyleId } from '../map/mapStyles';
 import type { UserLocation } from '../map/types';
+import { TypeIcon } from './TypeBadge';
 import { TYPE_COLOR } from './typeStyles';
 
 type LngLat = [number, number];
@@ -14,13 +15,16 @@ export const MAP_ID = 'main';
 
 const CHISINAU: LngLat = [28.8323, 47.0245];
 
+/** From this zoom on, vehicles show their type icon and route number instead of a plain dot. */
+const VEHICLE_DETAIL_ZOOM = 15;
+
 interface Props {
   stops: Stop[];
   routes: Route[];
   vehicles: Vehicle[];
   selectedStop: Stop | null;
-  /** When set, the route's path is drawn and framed. */
-  selectedRoute: Route | null;
+  /** Paths of these routes are drawn and framed. */
+  selectedRoutes: Route[];
   userLocation: UserLocation | null;
   mapStyleId: MapStyleId;
   onSelectStop: (stopId: string) => void;
@@ -29,12 +33,13 @@ interface Props {
 /** Moves the viewport when the selected stop or route changes. */
 function ViewController({
   selectedStop,
-  routePath,
-  routeId,
+  routePoints,
+  routesKey,
 }: {
   selectedStop: Stop | null;
-  routePath: LngLat[] | null;
-  routeId: string | null;
+  /** Every point of every selected route, used to frame them all. */
+  routePoints: LngLat[];
+  routesKey: string;
 }) {
   const { current: map } = useMap();
 
@@ -48,9 +53,9 @@ function ViewController({
   }, [map, selectedStop?.id]);
 
   useEffect(() => {
-    if (!map || !routePath) return;
-    const lngs = routePath.map(([lng]) => lng);
-    const lats = routePath.map(([, lat]) => lat);
+    if (!map || routePoints.length === 0) return;
+    const lngs = routePoints.map(([lng]) => lng);
+    const lats = routePoints.map(([, lat]) => lat);
     map.fitBounds(
       [
         [Math.min(...lngs), Math.min(...lats)],
@@ -58,7 +63,7 @@ function ViewController({
       ],
       { padding: 100 },
     );
-  }, [map, routeId]);
+  }, [map, routesKey]);
 
   return null;
 }
@@ -68,20 +73,23 @@ export function TransitMap({
   routes,
   vehicles,
   selectedStop,
-  selectedRoute,
+  selectedRoutes,
   userLocation,
   mapStyleId,
   onSelectStop,
 }: Props) {
+  // Only the threshold crossing is stored, so panning and zooming don't re-render every frame.
+  const [closeEnough, setCloseEnough] = useState(false);
   const stopsById = new Map(stops.map((s) => [s.id, s]));
   const routesById = new Map(routes.map((r) => [r.id, r]));
 
-  const routePath = selectedRoute
-    ? [...selectedRoute.stopIds, selectedRoute.stopIds[0]]
-        .map((id) => stopsById.get(id))
-        .filter((s): s is Stop => !!s)
-        .map((s): LngLat => [s.lng, s.lat])
-    : null;
+  const routePaths = selectedRoutes.map((route) => ({
+    route,
+    path: [...route.stopIds, route.stopIds[0]]
+      .map((id) => stopsById.get(id))
+      .filter((s): s is Stop => !!s)
+      .map((s): LngLat => [s.lng, s.lat]),
+  }));
 
   return (
     <MapGL
@@ -89,36 +97,38 @@ export function TransitMap({
       initialViewState={{ longitude: CHISINAU[0], latitude: CHISINAU[1], zoom: 14 }}
       mapStyle={(MAP_STYLES.find((s) => s.id === mapStyleId) ?? MAP_STYLES[0]).style}
       maxPitch={0}
+      onZoom={(e) => setCloseEnough(e.viewState.zoom >= VEHICLE_DETAIL_ZOOM)}
       style={{ width: '100%', height: '100%' }}
     >
       <ViewController
         selectedStop={selectedStop}
-        routePath={routePath}
-        routeId={selectedRoute?.id ?? null}
+        routePoints={routePaths.flatMap((p) => p.path)}
+        routesKey={selectedRoutes.map((r) => r.id).join(',')}
       />
 
-      {routePath && selectedRoute && (
+      {routePaths.map(({ route, path }) => (
         <Source
-          id="route"
+          key={route.id}
+          id={`route-${route.id}`}
           type="geojson"
           data={{
             type: 'Feature',
             properties: {},
-            geometry: { type: 'LineString', coordinates: routePath },
+            geometry: { type: 'LineString', coordinates: path },
           }}
         >
           <Layer
-            id="route-line"
+            id={`route-line-${route.id}`}
             type="line"
             layout={{ 'line-cap': 'round', 'line-join': 'round' }}
             paint={{
-              'line-color': TYPE_COLOR[selectedRoute.type],
+              'line-color': TYPE_COLOR[route.type],
               'line-width': 4,
               'line-opacity': 0.6,
             }}
           />
         </Source>
-      )}
+      ))}
 
       {stops.map((s) => {
         const selected = s.id === selectedStop?.id;
@@ -147,12 +157,21 @@ export function TransitMap({
         if (!route) return null;
         return (
           <Marker key={v.id} longitude={v.lng} latitude={v.lat} style={{ zIndex: 10 }}>
-            <div
-              style={{ background: TYPE_COLOR[route.type] }}
-              className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white text-[11px] font-bold text-white shadow-md"
-            >
-              {route.number}
-            </div>
+            {closeEnough ? (
+              <div
+                style={{ background: TYPE_COLOR[route.type] }}
+                className="flex items-center gap-1 rounded-full border-2 border-white px-2 py-1 text-xs font-bold text-white shadow-md"
+              >
+                <TypeIcon type={route.type} className="h-4 w-4" />
+                {route.number}
+              </div>
+            ) : (
+              <div
+                title={`${route.number}`}
+                style={{ background: TYPE_COLOR[route.type] }}
+                className="h-3.5 w-3.5 rounded-full border-2 border-white shadow-md"
+              />
+            )}
           </Marker>
         );
       })}

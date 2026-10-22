@@ -56,11 +56,15 @@ export function useArrivals(stopId: string | null, pollMs = 5000): Fetched<Arriv
   );
 }
 
-export function useVehicles(routeId: string | null): Vehicle[] {
+/** Live vehicles for the given routes; an empty list means every route. */
+export function useVehicles(routeIds: readonly string[]): Vehicle[] {
   const client = useTransportClient();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
 
-  useEffect(() => client.subscribeVehicles(routeId, setVehicles), [client, routeId]);
+  const key = routeIds.join(',');
+  // `routeIds` is a fresh array each render; `key` identifies when it really changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => client.subscribeVehicles(routeIds, setVehicles), [client, key]);
 
   return vehicles;
 }

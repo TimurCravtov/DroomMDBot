@@ -120,19 +120,19 @@ export class MockEasyWayClient implements TransportClient {
   }
 
   subscribeVehicles(
-    routeId: string | null,
+    routeIds: readonly string[],
     onData: (vehicles: Vehicle[]) => void,
   ): Unsubscribe {
-    const emit = () => onData(this.snapshot(routeId));
+    const emit = () => onData(this.snapshot(routeIds));
     emit();
     const timer = setInterval(emit, this.tickMs);
     return () => clearInterval(timer);
   }
 
-  private snapshot(routeId: string | null): Vehicle[] {
+  private snapshot(routeIds: readonly string[]): Vehicle[] {
     const now = Date.now();
     return this.fleet
-      .filter((v) => routeId === null || v.route.id === routeId)
+      .filter((v) => routeIds.length === 0 || routeIds.includes(v.route.id))
       .map((v) => {
         const { lat, lng, heading } = positionAt(v.loop, this.distanceAt(v, now));
         return {

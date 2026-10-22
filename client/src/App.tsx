@@ -1,23 +1,22 @@
 import { useState } from 'react';
-import { TbX } from 'react-icons/tb';
 import { ArrivalsPanel } from './components/ArrivalsPanel';
 import { CompassButton, LocateButton, ZoomButtons } from './components/MapControls';
 import { RoutePicker } from './components/RoutePicker';
 import { SearchBar } from './components/SearchBar';
+import { SelectedRoutes } from './components/SelectedRoutes';
 import { SettingsMenu } from './components/SettingsMenu';
 import { StyleSwitcher } from './components/StyleSwitcher';
 import { TransitMap } from './components/TransitMap';
-import { TypeBadge } from './components/TypeBadge';
-import { closeButton, mutedText, surface } from './components/ui';
 import { useTheme } from './hooks/useTheme';
 import { useArrivals, useRoutes, useStops, useVehicles } from './hooks/useTransport';
 import { loadMapStyleId, saveMapStyleId, type MapStyleId } from './map/mapStyles';
+import type { Route } from './api';
 import type { UserLocation } from './map/types';
 
 export function App() {
   const { data: routes = [] } = useRoutes();
   const { data: stops = [] } = useStops();
-  const [routeId, setRouteId] = useState<string | null>(null);
+  const [routeIds, setRouteIds] = useState<string[]>([]);
   const [stopId, setStopId] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
@@ -29,11 +28,13 @@ export function App() {
     saveMapStyleId(id);
   };
 
-  const vehicles = useVehicles(routeId);
+  const vehicles = useVehicles(routeIds);
   const { data: arrivals, error } = useArrivals(stopId);
 
   const selectedStop = stops.find((s) => s.id === stopId) ?? null;
-  const selectedRoute = routes.find((r) => r.id === routeId) ?? null;
+  const selectedRoutes = routeIds
+    .map((id) => routes.find((r) => r.id === id))
+    .filter((r): r is Route => !!r);
 
   // While the search bar is expanded, everything else fades out of the way.
   const hideWhenSearching = `transition-opacity duration-300 ${
@@ -48,7 +49,7 @@ export function App() {
           routes={routes}
           vehicles={vehicles}
           selectedStop={selectedStop}
-          selectedRoute={selectedRoute}
+          selectedRoutes={selectedRoutes}
           userLocation={userLocation}
           mapStyleId={mapStyleId}
           onSelectStop={setStopId}
@@ -61,7 +62,7 @@ export function App() {
       </div>
 
       <div className={`absolute bottom-10 left-3 z-10 ${hideWhenSearching}`}>
-        <RoutePicker routes={routes} selectedRouteId={routeId} onSelect={setRouteId} />
+        <RoutePicker routes={routes} selectedRouteIds={routeIds} onChange={setRouteIds} />
       </div>
 
       <div className={`absolute left-4 top-4 z-[1000] ${hideWhenSearching}`}>
@@ -77,26 +78,19 @@ export function App() {
         expanded={searchOpen}
         onExpandedChange={setSearchOpen}
         onSelectStop={setStopId}
-        onSelectRoute={setRouteId}
+        onSelectRoute={(id) => setRouteIds([id])}
       />
 
-      {selectedRoute && (
+      {selectedRoutes.length > 0 && (
         <div
-          className={`pointer-events-none absolute inset-x-0 top-[4.75rem] z-[1000] flex justify-center ${hideWhenSearching}`}
+          className={`pointer-events-none absolute inset-x-4 top-[4.75rem] z-[1000] flex justify-center ${hideWhenSearching}`}
         >
-          <div
-            className={`pointer-events-auto flex items-center gap-2 rounded-full py-1.5 pl-4 pr-2 text-sm shadow-lg ${surface}`}
-          >
-            <span className="font-bold">{selectedRoute.number}</span>
-            <TypeBadge type={selectedRoute.type} />
-            <span className={mutedText}>{selectedRoute.name}</span>
-            <button
-              aria-label="Show all routes"
-              className={closeButton}
-              onClick={() => setRouteId(null)}
-            >
-              <TbX className="h-5 w-5" />
-            </button>
+          <div className="pointer-events-auto max-w-full">
+            <SelectedRoutes
+              routes={selectedRoutes}
+              onRemove={(id) => setRouteIds((ids) => ids.filter((x) => x !== id))}
+              onClear={() => setRouteIds([])}
+            />
           </div>
         </div>
       )}
