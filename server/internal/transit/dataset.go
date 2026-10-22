@@ -3,6 +3,7 @@ package transit
 import (
 	"context"
 	"errors"
+	"math"
 	"sort"
 	"strconv"
 	"sync"
@@ -17,6 +18,10 @@ type trip struct {
 	routeID     string
 	line        *geo.Polyline
 	stopOffsets map[string]float64 // stop id -> meters along the shape
+
+	stops  []string  // stop ids in travel order
+	dist   []float64 // meters travelled at each stop, non-decreasing
+	shaped bool      // dist is measured along line, so line can draw the way between stops
 }
 
 // Dataset is the static part of the feed. It is built once, never mutated, and
@@ -30,6 +35,10 @@ type Dataset struct {
 	RouteShapes map[string][][][2]float64
 
 	trips map[string]*trip
+	// stopRefs lists every trip stopping at a stop, and where in its sequence.
+	stopRefs map[string][]stopRef
+	// grid buckets stop indices by map cell for nearby-stop lookups.
+	grid map[cell][]int
 	// stopRoutes lists the distinct route numbers calling at each stop.
 	stopRoutes map[string][]string
 }
@@ -132,6 +141,7 @@ func Load(ctx context.Context, up *tranzy.Client) (*Dataset, error) {
 	for _, t := range trips {
 		routeID := strconv.Itoa(t.RouteID)
 		tr := &trip{id: t.TripID, routeID: routeID}
+		tr.stops = knownStops(ds, tripStops[t.TripID])
 		if pts := shapes[t.ShapeID]; len(pts) >= 2 {
 			tr.line = geo.NewPolyline(pts)
 			tr.stopOffsets = placeStops(ds, tr.line, tripStops[t.TripID])
@@ -148,6 +158,7 @@ func Load(ctx context.Context, up *tranzy.Client) (*Dataset, error) {
 				ds.RouteShapes[routeID] = append(ds.RouteShapes[routeID], path)
 			}
 		}
+		tr.dist, tr.shaped = stopDistances(ds, tr.line, tr.stops)
 		ds.trips[t.TripID] = tr
 		routeTrips[routeID] = append(routeTrips[routeID], tr)
 	}
@@ -190,6 +201,7 @@ func Load(ctx context.Context, up *tranzy.Client) (*Dataset, error) {
 	if len(ds.Routes) == 0 || len(ds.Stops) == 0 {
 		return nil, errors.New("upstream returned no routes or stops")
 	}
+	ds.index()
 	return ds, nil
 }
 
@@ -234,4 +246,46 @@ func numberLess(a, b string) bool {
 	default:
 		return a < b
 	}
+}
+
+// knownStops drops ids that are not in the stop list.
+func knownStops(ds *Dataset, ids []string) []string {
+	out := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if ds.StopsByID[id] != nil {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
+// stopDistances measures how far along a trip each stop lies. It uses the shape where
+// a stop sits on it, and otherwise adds the straight-line hop from the previous stop.
+// The result never decreases. shaped reports whether every stop was found on the shape.
+func stopDistances(ds *Dataset, line *geo.Polyline, stopIDs []string) (dist []float64, shaped bool) {
+	dist = make([]float64, len(stopIDs))
+	shaped = line != nil
+	fromSeg, prev := 0, 0.0
+	var prevPos geo.Point
+	for i, id := range stopIDs {
+		stop := ds.StopsByID[id]
+		pos := geo.Point{Lat: stop.Lat, Lng: stop.Lng}
+
+		d, found := 0.0, false
+		if line != nil {
+			offset, off, seg := line.Project(pos, fromSeg)
+			if off <= 200 {
+				d, found, fromSeg = offset, true, seg
+			}
+		}
+		if !found {
+			shaped = false
+			if i > 0 {
+				d = prev + geo.Haversine(prevPos, pos)
+			}
+		}
+		d = math.Max(d, prev)
+		dist[i], prev, prevPos = d, d, pos
+	}
+	return dist, shaped
 }

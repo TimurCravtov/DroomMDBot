@@ -15,6 +15,7 @@ import (
 
 	"droommd/server/internal/config"
 	"droommd/server/internal/fleet"
+	"droommd/server/internal/geocode"
 	"droommd/server/internal/httpapi"
 	"droommd/server/internal/transit"
 	"droommd/server/internal/tranzy"
@@ -49,7 +50,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           httpapi.New(cfg, &current, live).Handler(),
+		Handler:           httpapi.New(cfg, &current, live, geocode.New(cfg.GeocoderURL, cfg.GeocoderAgent)).Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 		// No WriteTimeout: it would cut off the event stream.
 	}

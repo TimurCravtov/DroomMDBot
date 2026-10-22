@@ -48,8 +48,12 @@ func TestSearchParsesPlacesAndSkipsBrokenOnes(t *testing.T) {
 	if len(got) != 2 {
 		t.Fatalf("got %d results, want 2 (the unparsable one is dropped): %+v", len(got), got)
 	}
-	if got[0].Label != "Universitatea de Stat" || got[0].Lat != 47.0188945 {
+	// The query has a number, so the address leads and the place's name moves to the detail.
+	if got[0].Label != "Strada Alexei Mateevici 60" || got[0].Lat != 47.0188945 {
 		t.Errorf("first result = %+v", got[0])
+	}
+	if got[0].Detail != "Universitatea de Stat, Buiucani, Chișinău" {
+		t.Errorf("first detail = %q, want the place name first", got[0].Detail)
 	}
 	// Unnamed places are titled by street and number; postcodes stay out of the detail.
 	if got[1].Label != "Strada Pușkin 12" {
@@ -104,5 +108,39 @@ func TestSearchHonoursCancellationWhileQueued(t *testing.T) {
 	defer cancel()
 	if _, err := c.Search(ctx, "second"); err == nil {
 		t.Error("expected the queued search to fail once its context expired")
+	}
+}
+
+func TestSearchPrefersPlaceNamesWithoutANumber(t *testing.T) {
+	var hits atomic.Int32
+	c := testClient(t, &hits)
+	got, err := c.Search(context.Background(), "universitatea")
+	if err != nil || len(got) == 0 {
+		t.Fatalf("results=%v err=%v", got, err)
+	}
+	if got[0].Label != "Universitatea de Stat" {
+		t.Errorf("label = %q, want the place's name when no house number was typed", got[0].Label)
+	}
+}
+
+func TestSearchMergesABuildingWithTheShopInIt(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`[
+		  {"display_name":"Палуба, 60/1, Șoseaua Hâncești, Dokuceaev, Chișinău","name":"Палуба","lat":"47.0027","lon":"28.8456",
+		   "address":{"road":"Șoseaua Hâncești","house_number":"60/1"}},
+		  {"display_name":"60/1, Șoseaua Hâncești, Dokuceaev, Chișinău","name":"","lat":"47.0027","lon":"28.8456",
+		   "address":{"road":"Șoseaua Hâncești","house_number":"60/1"}}
+		]`))
+	}))
+	defer srv.Close()
+	c := New(srv.URL, "test-agent")
+	c.minInterval = time.Millisecond
+
+	got, err := c.Search(context.Background(), "sos hancesti 60/1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0].Label != "Șoseaua Hâncești 60/1" {
+		t.Fatalf("results = %+v, want one merged address result", got)
 	}
 }

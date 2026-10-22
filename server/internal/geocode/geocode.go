@@ -141,49 +141,68 @@ func (c *Client) fetch(ctx context.Context, query string) ([]Result, error) {
 		return nil, fmt.Errorf("geocoder: decoding response: %w", err)
 	}
 
+	// Someone typing a number wants an address; otherwise a place's own name is the best title.
+	preferAddress := strings.ContainsAny(query, "0123456789")
+
 	out := make([]Result, 0, len(places))
+	seen := map[string]bool{}
 	for _, p := range places {
 		lat, errLat := strconv.ParseFloat(p.Lat, 64)
 		lng, errLng := strconv.ParseFloat(p.Lon, 64)
 		if errLat != nil || errLng != nil {
 			continue
 		}
-		label, detail := describe(p)
+		label, detail := describe(p, preferAddress)
+
+		// A building and the shop inside it are the same spot to a traveller.
+		key := fmt.Sprintf("%s|%.4f|%.4f", label, lat, lng)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
 		out = append(out, Result{Label: label, Detail: detail, Lat: lat, Lng: lng})
 	}
 	return out, nil
 }
 
-// describe builds a short title and a secondary line from a Nominatim place:
-// the place's own name, or else its street and house number.
-func describe(p nominatimPlace) (label, detail string) {
+// describe builds a short title and a secondary line from a Nominatim place. The
+// title is the street and house number when preferAddress is set and they are known,
+// otherwise the place's own name, otherwise whatever address parts exist.
+func describe(p nominatimPlace, preferAddress bool) (label, detail string) {
 	parts := strings.Split(p.DisplayName, ",")
 	for i := range parts {
 		parts[i] = strings.TrimSpace(parts[i])
 	}
 
+	road, house := p.Address["road"], p.Address["house_number"]
 	switch {
+	case preferAddress && road != "" && house != "":
+		label = road + " " + house
 	case p.Name != "":
 		label = p.Name
-	case p.Address["road"] != "":
-		label = p.Address["road"]
-		if n := p.Address["house_number"]; n != "" {
-			label += " " + n
+	case road != "":
+		label = road
+		if house != "" {
+			label += " " + house
 		}
 	case len(parts) > 0:
 		label = parts[0]
 	}
 
-	// The rest of the display name, minus the title and noise like postcodes.
+	// The rest of the display name, minus the title and noise like postcodes. A place's
+	// name that lost the title to its address stays as the first detail.
 	var rest []string
+	if p.Name != "" && p.Name != label {
+		rest = append(rest, p.Name)
+	}
 	for _, part := range parts {
-		if part == "" || strings.Contains(label, part) || isPostcode(part) {
-			continue // already in the title, or noise
-		}
-		rest = append(rest, part)
 		if len(rest) == 3 {
 			break
 		}
+		if part == "" || part == p.Name || strings.Contains(label, part) || isPostcode(part) {
+			continue // already in the title, or noise
+		}
+		rest = append(rest, part)
 	}
 	return label, strings.Join(rest, ", ")
 }

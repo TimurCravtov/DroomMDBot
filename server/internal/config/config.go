@@ -16,6 +16,8 @@ type Config struct {
 	AgencyID      string
 	Addr          string
 	CORSOrigin    string
+	GeocoderURL   string
+	GeocoderAgent string
 	VehiclePoll   time.Duration
 	MaxVehicleAge time.Duration
 	StaticRefresh time.Duration
@@ -27,11 +29,14 @@ func Load() (Config, error) {
 	loadDotEnv(".env", "../.env")
 
 	cfg := Config{
-		APIKey:        os.Getenv("TRANZY_API_KEY"),
-		BaseURL:       envOr("TRANZY_BASE_URL", "https://api.tranzy.ai/v1/opendata"),
-		AgencyID:      envOr("TRANZY_AGENCY_ID", "4"), // 4 = RTEC & PUA Chisinau
-		Addr:          ":" + envOr("PORT", "8080"),
-		CORSOrigin:    os.Getenv("CORS_ORIGIN"),
+		APIKey:      os.Getenv("TRANZY_API_KEY"),
+		BaseURL:     envOr("TRANZY_BASE_URL", "https://api.tranzy.ai/v1/opendata"),
+		AgencyID:    envOr("TRANZY_AGENCY_ID", "4"), // 4 = RTEC & PUA Chisinau
+		Addr:        ":" + envOr("PORT", "8080"),
+		CORSOrigin:  os.Getenv("CORS_ORIGIN"),
+		GeocoderURL: envOr("GEOCODER_URL", "https://nominatim.openstreetmap.org"),
+		// Nominatim's usage policy asks for an identifying User-Agent.
+		GeocoderAgent: envOr("GEOCODER_USER_AGENT", "droommd-transit/0.1 (+https://github.com/TimurCravtov/DroomMDBot)"),
 		VehiclePoll:   5 * time.Second,
 		MaxVehicleAge: 5 * time.Minute,
 		StaticRefresh: 6 * time.Hour,

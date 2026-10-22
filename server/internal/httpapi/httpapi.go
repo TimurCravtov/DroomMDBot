@@ -7,23 +7,27 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
 
 	"droommd/server/internal/config"
 	"droommd/server/internal/fleet"
+	"droommd/server/internal/geo"
+	"droommd/server/internal/geocode"
 	"droommd/server/internal/transit"
 )
 
 type Server struct {
-	cfg   config.Config
-	ds    *atomic.Pointer[transit.Dataset]
-	fleet *fleet.Fleet
+	cfg      config.Config
+	ds       *atomic.Pointer[transit.Dataset]
+	fleet    *fleet.Fleet
+	geocoder *geocode.Client
 }
 
-func New(cfg config.Config, ds *atomic.Pointer[transit.Dataset], f *fleet.Fleet) *Server {
-	return &Server{cfg: cfg, ds: ds, fleet: f}
+func New(cfg config.Config, ds *atomic.Pointer[transit.Dataset], f *fleet.Fleet, g *geocode.Client) *Server {
+	return &Server{cfg: cfg, ds: ds, fleet: f, geocoder: g}
 }
 
 // Handler returns the routed handler with logging and CORS applied.
@@ -35,6 +39,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/stops", s.stops)
 	mux.HandleFunc("GET /api/stops/{id}/arrivals", s.arrivals)
 	mux.HandleFunc("GET /api/search", s.search)
+	mux.HandleFunc("GET /api/geocode", s.geocode)
+	mux.HandleFunc("GET /api/plan", s.plan)
 	mux.HandleFunc("GET /api/vehicles", s.vehicles)
 	mux.HandleFunc("GET /api/vehicles/stream", s.streamVehicles)
 	return s.withCORS(withLogging(mux))
@@ -192,4 +198,64 @@ func withLogging(next http.Handler) http.Handler {
 		// Streams are long-lived; logging them on close is enough.
 		log.Printf("%s %s (%s)", r.Method, r.URL.RequestURI(), time.Since(start).Round(time.Millisecond))
 	})
+}
+
+func (s *Server) geocode(w http.ResponseWriter, r *http.Request) {
+	results, err := s.geocoder.Search(r.Context(), r.URL.Query().Get("q"))
+	if err != nil {
+		if r.Context().Err() != nil {
+			return // the client went away
+		}
+		log.Printf("geocode: %v", err)
+		writeError(w, http.StatusBadGateway, "address lookup is unavailable")
+		return
+	}
+	writeJSON(w, http.StatusOK, results)
+}
+
+// parsePoint reads "lat,lng".
+func parsePoint(v string) (geo.Point, bool) {
+	latStr, lngStr, ok := strings.Cut(v, ",")
+	if !ok {
+		return geo.Point{}, false
+	}
+	lat, errLat := strconv.ParseFloat(strings.TrimSpace(latStr), 64)
+	lng, errLng := strconv.ParseFloat(strings.TrimSpace(lngStr), 64)
+	if errLat != nil || errLng != nil || lat < -90 || lat > 90 || lng < -180 || lng > 180 {
+		return geo.Point{}, false
+	}
+	return geo.Point{Lat: lat, Lng: lng}, true
+}
+
+// plan answers /api/plan?from=lat,lng&to=lat,lng with itineraries, fastest first.
+func (s *Server) plan(w http.ResponseWriter, r *http.Request) {
+	from, okFrom := parsePoint(r.URL.Query().Get("from"))
+	to, okTo := parsePoint(r.URL.Query().Get("to"))
+	if !okFrom || !okTo {
+		writeError(w, http.StatusBadRequest, "from and to must be lat,lng")
+		return
+	}
+
+	ds := s.ds.Load()
+	vehicles, _ := s.fleet.Live()
+	now := time.Now()
+
+	// Live waits: the soonest vehicle of a route at a stop, from the arrival estimates.
+	// Each stop is estimated once per request, however many options board there.
+	cache := map[string][]transit.Arrival{}
+	wait := func(routeID, stopID string, notBefore float64) (float64, bool) {
+		arrivals, ok := cache[stopID]
+		if !ok {
+			arrivals = ds.ArrivalsAt(vehicles, stopID, now)
+			cache[stopID] = arrivals
+		}
+		for _, a := range arrivals { // sorted soonest first
+			if a.RouteID == routeID && float64(a.ETASeconds) >= notBefore {
+				return float64(a.ETASeconds), true
+			}
+		}
+		return 0, false
+	}
+
+	writeJSON(w, http.StatusOK, ds.Plan(from, to, wait))
 }
