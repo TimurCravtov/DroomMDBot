@@ -185,11 +185,47 @@ func (s *Server) streamVehicles(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) withCORS(next http.Handler) http.Handler {
-	if s.cfg.CORSOrigin == "" {
+	return cors(s.cfg.CORSOrigin, next)
+}
+
+// cors lets browsers on other origins call the API. allowed is a comma-separated list of
+// origins (or "*"); empty disables CORS, which is right when the client is served from the
+// same origin. Requests carry credentials in the Authorization header, not cookies, so
+// "*" is safe, and browsers send a preflight (OPTIONS) first because of that header: it is
+// answered here, without reaching the handlers.
+func cors(allowed string, next http.Handler) http.Handler {
+	origins := map[string]bool{}
+	for _, o := range strings.Split(allowed, ",") {
+		if o = strings.TrimRight(strings.TrimSpace(o), "/"); o != "" {
+			origins[o] = true
+		}
+	}
+	if len(origins) == 0 {
 		return next
 	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", s.cfg.CORSOrigin)
+		origin := r.Header.Get("Origin")
+		w.Header().Add("Vary", "Origin")
+
+		switch {
+		case origins["*"]:
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+		case origin != "" && origins[origin]:
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+		default:
+			next.ServeHTTP(w, r) // not an allowed origin: no CORS headers, the browser blocks it
+			return
+		}
+
+		if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" {
+			h := w.Header()
+			h.Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
+			h.Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+			h.Set("Access-Control-Max-Age", "600")
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
 		next.ServeHTTP(w, r)
 	})
 }
