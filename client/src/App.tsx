@@ -183,7 +183,7 @@ export function App() {
 
         <MapCredits mapStyleId={mapStyleId} />
 
-        <div className={`absolute bottom-10 right-3 z-10 flex items-center gap-2 ${hideOnlyWhenSearching}`}>
+        <div className={`absolute bottom-4 right-3 z-10 flex items-center gap-2 ${hideOnlyWhenSearching}`}>
           <ZoomButtons />
           <LocateButton onLocated={setUserLocation} />
         </div>
