@@ -1,0 +1,60 @@
+# Run the API server (and optionally the web client) with Docker:
+#
+#   cp .env.example .env        # fill in TRANZY_API_KEY and TELEGRAM_BOT_TOKEN
+#   docker compose up -d --build
+#
+# The SQLite database is kept in the named volume "droommd-data", so it survives
+# rebuilds and restarts. Back it up with deploy/backup.sh.
+
+services:
+  server:
+    build: ./server
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DB_PATH: /data/droommd.db
+    volumes:
+      - droommd-data:/data
+    # Only the local machine can reach the API directly; put a reverse proxy (the "web"
+    # service below, or your own nginx/Caddy) in front of it for the public internet.
+    ports:
+      - "127.0.0.1:8080:8080"
+    healthcheck:
+      test: ["CMD", "/server", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    # Read-only root filesystem: the server only writes to /data.
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  # Optional: serves the built client and proxies /api to the server, with automatic
+  # HTTPS. Start it with:  docker compose --profile web up -d
+  # Build the client first:  cd client && npm ci && npm run build
+  # Set SITE_ADDRESS in .env to your domain (for example bus.example.com).
+  web:
+    profiles: ["web"]
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_healthy
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./client/dist:/srv:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  droommd-data:
+  caddy-data:
+  caddy-config:
