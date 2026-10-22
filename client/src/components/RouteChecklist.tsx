@@ -15,10 +15,18 @@ interface Props {
   onToggle: (routeId: string) => void;
   /** Taller rows, for full-width lists. */
   roomy?: boolean;
+  /** Show a checkbox per row (multi-select). Without it a row is a plain pick button. */
+  checkboxes?: boolean;
 }
 
 /** `<li>` rows with a checkbox per route; render inside a `<ul>`. */
-export function RouteChecklistItems({ routes, selectedRouteIds, onToggle, roomy = false }: Props) {
+export function RouteChecklistItems({
+  routes,
+  selectedRouteIds,
+  onToggle,
+  roomy = false,
+  checkboxes = true,
+}: Props) {
   return (
     <>
       {routes.map((r) => {
@@ -26,8 +34,7 @@ export function RouteChecklistItems({ routes, selectedRouteIds, onToggle, roomy 
         return (
           <li key={r.id}>
             <button
-              role="checkbox"
-              aria-checked={checked}
+              {...(checkboxes ? { role: 'checkbox', 'aria-checked': checked } : {})}
               className={`flex w-full items-center gap-3 px-4 text-left ${
                 roomy ? 'py-3' : 'py-2.5'
               } ${hoverRow}`}
@@ -40,15 +47,17 @@ export function RouteChecklistItems({ routes, selectedRouteIds, onToggle, roomy 
                   <TypeBadge type={r.type} />
                 </span>
               </span>
-              <span
-                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
-                  checked
-                    ? 'border-ink-900 bg-ink-900 text-white dark:border-white dark:bg-white dark:text-ink-900'
-                    : 'border-ink-300 dark:border-ink-600'
-                }`}
-              >
-                {checked && <TbCheck className="h-4 w-4" />}
-              </span>
+              {checkboxes && (
+                <span
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
+                    checked
+                      ? 'border-ink-900 bg-ink-900 text-white dark:border-white dark:bg-white dark:text-ink-900'
+                      : 'border-ink-300 dark:border-ink-600'
+                  }`}
+                >
+                  {checked && <TbCheck className="h-4 w-4" />}
+                </span>
+              )}
             </button>
           </li>
         );

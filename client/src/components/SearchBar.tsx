@@ -262,10 +262,13 @@ export function SearchBar({
               )}
             </div>
             <ul>
+              {/* Tapping a suggestion picks that route and leaves the search for the map;
+                  choosing several is what "View more routes" is for. */}
               <RouteChecklistItems
                 routes={suggested}
                 selectedRouteIds={selectedRouteIds}
-                onToggle={toggle}
+                onToggle={(id) => pick(() => onSelectRoute(id))}
+                checkboxes={false}
               />
             </ul>
             <div className="flex border-t border-ink-200 dark:border-ink-700">
@@ -276,14 +279,6 @@ export function SearchBar({
                 View more routes
                 <TbChevronRight className="h-4 w-4" />
               </button>
-              {selectedRouteIds.length > 0 && (
-                <button
-                  className="border-l border-ink-200 px-4 text-sm font-semibold hover:bg-ink-50 dark:border-ink-700 dark:hover:bg-ink-700"
-                  onClick={close}
-                >
-                  Show {selectedRouteIds.length}
-                </button>
-              )}
             </div>
           </div>
         )}
