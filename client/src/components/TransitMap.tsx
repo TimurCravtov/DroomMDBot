@@ -32,6 +32,7 @@ const VEHICLE_DETAIL_ZOOM = 15;
 const STOPS_MIN_ZOOM = 13.5;
 
 const STOPS_LAYER = 'stops';
+const VEHICLE_LAYER = 'vehicle-dots';
 
 const typeColorExpression: ExpressionSpecification = [
   'match',
@@ -61,6 +62,8 @@ interface Props {
   mapStyleId: MapStyleId;
   onSelectStop: (stopId: string) => void;
   onSelectPlace: (place: Place) => void;
+  /** Called when a vehicle (dot or pill) is clicked. */
+  onSelectVehicle: (vehicle: Vehicle) => void;
 }
 
 /** Moves the viewport when the selected stop, place or routes change. */
@@ -126,6 +129,7 @@ export function TransitMap({
   mapStyleId,
   onSelectStop,
   onSelectPlace,
+  onSelectVehicle,
 }: Props) {
   // Only the threshold crossing is stored, so panning and zooming don't re-render every frame.
   const [closeEnough, setCloseEnough] = useState(false);
@@ -157,7 +161,7 @@ export function TransitMap({
         return [
           {
             type: 'Feature' as const,
-            properties: { type: route.type satisfies TransportType, number: route.number },
+            properties: { type: route.type satisfies TransportType, vehicleId: v.id },
             geometry: { type: 'Point' as const, coordinates: [v.lng, v.lat] as LngLat },
           },
         ];
@@ -187,8 +191,15 @@ export function TransitMap({
   };
 
   const handleClick = (e: MapLayerMouseEvent) => {
-    const id = e.features?.[0]?.properties?.id;
-    if (id !== undefined) onSelectStop(String(id));
+    // Features come top-most first, so a vehicle wins over the stop underneath it.
+    const feature = e.features?.[0];
+    if (!feature) return;
+    if (feature.layer.id === VEHICLE_LAYER) {
+      const vehicle = vehicles.find((v) => v.id === String(feature.properties.vehicleId));
+      if (vehicle) onSelectVehicle(vehicle);
+    } else if (feature.properties.id !== undefined) {
+      onSelectStop(String(feature.properties.id));
+    }
   };
 
   return (
@@ -197,7 +208,7 @@ export function TransitMap({
       initialViewState={{ longitude: CHISINAU[0], latitude: CHISINAU[1], zoom: 14 }}
       mapStyle={(MAP_STYLES.find((s) => s.id === mapStyleId) ?? MAP_STYLES[0]).style}
       maxPitch={0}
-      interactiveLayerIds={[STOPS_LAYER]}
+      interactiveLayerIds={[STOPS_LAYER, VEHICLE_LAYER]}
       cursor={overStop ? 'pointer' : undefined}
       onMouseEnter={() => setOverStop(true)}
       onMouseLeave={() => setOverStop(false)}
@@ -290,7 +301,7 @@ export function TransitMap({
       {/* Far away: plain colored dots, drawn by the map itself. */}
       <Source id="vehicles" type="geojson" data={vehiclesGeoJson}>
         <Layer
-          id="vehicle-dots"
+          id={VEHICLE_LAYER}
           type="circle"
           layout={{ visibility: closeEnough ? 'none' : 'visible' }}
           paint={{
@@ -308,13 +319,18 @@ export function TransitMap({
         if (!route) return null;
         return (
           <Marker key={v.id} longitude={v.lng} latitude={v.lat} style={{ zIndex: 10 }}>
-            <div
+            <button
+              title={`Show route ${route.number}`}
               style={{ background: TYPE_COLOR[route.type] }}
               className="flex items-center gap-1 rounded-full border-2 border-white px-2 py-1 text-xs font-bold text-white shadow-md"
+              onClick={(e) => {
+                e.stopPropagation(); // don't also click the map underneath
+                onSelectVehicle(v);
+              }}
             >
               <TypeIcon type={route.type} className="h-4 w-4" />
               {route.number}
-            </div>
+            </button>
           </Marker>
         );
       })}

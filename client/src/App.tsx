@@ -19,7 +19,7 @@ import {
   useVehicles,
 } from './hooks/useTransport';
 import { loadMapStyleId, saveMapStyleId, type MapStyleId } from './map/mapStyles';
-import type { Place, PlaceKind, Route, Stop } from './api';
+import type { Place, PlaceKind, Route, Stop, Vehicle } from './api';
 import type { UserLocation } from './map/types';
 
 export function App() {
@@ -87,6 +87,11 @@ export function App() {
 
   const showStopArrivals = (stop: Stop) => selectStop(stop.id);
 
+  // Clicking a vehicle shows its route: it becomes the selection if nothing was
+  // selected (which means "all routes"), and is added to it otherwise.
+  const selectVehicle = (vehicle: Vehicle) =>
+    setRouteIds((ids) => (ids.includes(vehicle.routeId) ? ids : [...ids, vehicle.routeId]));
+
   // Markers for saved places, plus the temporary dropped pin.
   const mapPlaces = focusedPlace?.kind === 'pin' ? [...places, focusedPlace] : places;
 
@@ -112,6 +117,7 @@ export function App() {
           focusedPlace={focusedPlace}
           onSelectStop={selectStop}
           onSelectPlace={focusPlace}
+          onSelectVehicle={selectVehicle}
         />
       </div>
 
