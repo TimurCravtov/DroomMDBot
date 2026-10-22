@@ -12,6 +12,7 @@ import { TransitMap } from './components/TransitMap';
 import { useTheme } from './hooks/useTheme';
 import {
   useArrivals,
+  useRoutePaths,
   useRoutes,
   useSavedPlaces,
   useStops,
@@ -41,6 +42,7 @@ export function App() {
   };
 
   const vehicles = useVehicles(routeIds);
+  const routePaths = useRoutePaths(routeIds);
   const { data: arrivals, error } = useArrivals(stopId);
 
   const selectedStop = stops.find((s) => s.id === stopId) ?? null;
@@ -103,6 +105,7 @@ export function App() {
           vehicles={vehicles}
           selectedStop={selectedStop}
           selectedRoutes={selectedRoutes}
+          routePaths={routePaths}
           userLocation={userLocation}
           mapStyleId={mapStyleId}
           places={mapPlaces}

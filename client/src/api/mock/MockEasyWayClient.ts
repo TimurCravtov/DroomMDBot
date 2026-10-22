@@ -2,6 +2,7 @@ import type { TransportClient } from '../client';
 import type {
   Arrival,
   GeocodeResult,
+  LngLat,
   LocationInfo,
   NewPlace,
   Place,
@@ -13,7 +14,7 @@ import type {
   Vehicle,
 } from '../types';
 import { MOCK_ADDRESSES, MOCK_ROUTES, MOCK_STOPS } from './data';
-import { distanceMeters } from './geo';
+import { distanceMeters } from '../geo';
 import { buildLoop, positionAt, type Loop } from './loop';
 
 const SPEED_MS: Record<TransportType, number> = {
@@ -121,6 +122,13 @@ export class MockEasyWayClient implements TransportClient {
       });
     }
     return this.respond(arrivals.sort((a, b) => a.etaSeconds - b.etaSeconds));
+  }
+
+  getRoutePaths(routeId: string): Promise<LngLat[][]> {
+    const route = MOCK_ROUTES.find((r) => r.id === routeId);
+    if (!route) return this.respond([]);
+    const loop = buildLoop(route.stopIds.map((id) => this.stopById(id)));
+    return this.respond([loop.points.map((p): LngLat => [p.lng, p.lat])]);
   }
 
   search(query: string): Promise<SearchResults> {

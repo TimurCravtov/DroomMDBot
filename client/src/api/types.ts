@@ -1,5 +1,8 @@
 export type TransportType = 'bus' | 'trolleybus' | 'minibus';
 
+/** Longitude first, as map libraries expect. */
+export type LngLat = [number, number];
+
 export interface Stop {
   id: string;
   name: string;

@@ -1,4 +1,4 @@
-import { bearingDegrees, distanceMeters, type LatLng } from './geo';
+import { bearingDegrees, distanceMeters, type LatLng } from '../geo';
 
 /** A closed polyline through a route's stops, measured in meters. */
 export interface Loop {

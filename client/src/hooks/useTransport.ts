@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTransportClient } from '../api/context';
 import type {
   Arrival,
   GeocodeResult,
+  LngLat,
   LocationInfo,
   NewPlace,
   Place,
@@ -195,4 +196,27 @@ export function useGeocode(query: string, debounceMs = 200): GeocodeResult[] {
   }, [client, query, debounceMs]);
 
   return results;
+}
+
+/**
+ * Drawable paths for the given routes, keyed by route id. Each route is fetched once
+ * (the client caches static data); routes still loading are simply absent.
+ */
+export function useRoutePaths(routeIds: readonly string[]): Record<string, LngLat[][]> {
+  const client = useTransportClient();
+  const [paths, setPaths] = useState<Record<string, LngLat[][]>>({});
+  const requested = useRef(new Set<string>());
+
+  useEffect(() => {
+    for (const id of routeIds) {
+      if (requested.current.has(id)) continue;
+      requested.current.add(id);
+      client
+        .getRoutePaths(id)
+        .then((p) => setPaths((prev) => ({ ...prev, [id]: p })))
+        .catch(() => requested.current.delete(id)); // retry the next time it is selected
+    }
+  }, [client, routeIds.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return paths;
 }

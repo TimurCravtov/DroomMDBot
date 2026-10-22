@@ -1,6 +1,7 @@
 import type {
   Arrival,
   GeocodeResult,
+  LngLat,
   LocationInfo,
   NewPlace,
   Place,
@@ -19,6 +20,8 @@ export interface TransportClient {
   getStops(): Promise<Stop[]>;
   getRoutes(): Promise<Route[]>;
   getArrivals(stopId: string): Promise<Arrival[]>;
+  /** Drawable paths of a route, one per direction. */
+  getRoutePaths(routeId: string): Promise<LngLat[][]>;
   /** Finds routes (by number or name), stops and saved places (by name). */
   search(query: string): Promise<SearchResults>;
   getSavedPlaces(): Promise<Place[]>;
