@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { TbCircle, TbCurrentLocation, TbMap2, TbMapPin } from 'react-icons/tb';
 import type { Place } from '../api';
 import { useGeocode, useSearch } from '../hooks/useTransport';
@@ -30,13 +30,12 @@ function Option({
 }) {
   return (
     <li>
-      {/* onMouseDown fires before the input blurs, so the list is still there to click. */}
+      {/* Preventing the mousedown keeps focus in the input, so the list isn't torn down
+          before the click lands (and the click can't fall through to what is underneath). */}
       <button
         className={`flex w-full items-center gap-3 px-3 py-2 text-left text-sm ${hoverRow}`}
-        onMouseDown={(e) => {
-          e.preventDefault();
-          onChoose();
-        }}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={onChoose}
       >
         <span className="shrink-0 text-ink-400">{icon}</span>
         <span className="min-w-0 flex-1">
@@ -63,6 +62,7 @@ export function EndpointField({
   const [editing, setEditing] = useState(false);
   const [query, setQuery] = useState('');
   const [locationError, setLocationError] = useState(false);
+  const [locating, setLocating] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { data } = useSearch(query);
@@ -81,10 +81,23 @@ export function EndpointField({
   const choosePlace = (p: Place) =>
     choose({ label: p.label, lat: p.lat, lng: p.lng, kind: 'place' });
 
+  // The menu closes at once; the lookup can take seconds, so the field says so meanwhile.
   const useMyLocation = () => {
     setLocationError(false);
-    onUseMyLocation().then(choose, () => setLocationError(true));
+    setLocating(true);
+    finish();
+    onUseMyLocation()
+      .then(onChange, () => setLocationError(true))
+      .finally(() => setLocating(false));
   };
+
+  // If the value is set from elsewhere while the menu is open (for example the automatic
+  // "my location" lookup finishing), the menu has nothing left to offer: close it.
+  useEffect(() => {
+    if (editing) finish();
+    // Only a change of the value itself should close the menu.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value?.lat, value?.lng]);
 
   const stopOptions = hasQuery ? (data?.stops ?? []).slice(0, 4) : [];
   const placeOptions = hasQuery ? (data?.places ?? []) : places;
@@ -99,7 +112,7 @@ export function EndpointField({
         )}
         <input
           ref={inputRef}
-          value={editing ? query : (value?.label ?? '')}
+          value={editing ? query : locating && !value ? 'Locating…' : (value?.label ?? '')}
           placeholder={role === 'from' ? 'Choose starting point' : 'Choose destination'}
           aria-label={role === 'from' ? 'From' : 'To'}
           className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-ink-400"
@@ -113,6 +126,12 @@ export function EndpointField({
         />
       </label>
 
+      {locationError && !editing && (
+        <p className="mt-1 px-1 text-xs text-red-600">
+          Location unavailable — check your browser's permissions.
+        </p>
+      )}
+
       {editing && (
         <ul
           className={`absolute inset-x-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-xl py-1 shadow-lg ${surface}`}
@@ -121,7 +140,6 @@ export function EndpointField({
             <Option
               icon={<TbCurrentLocation className="h-5 w-5" />}
               title="My location"
-              detail={locationError ? 'Location unavailable — check browser permissions' : undefined}
               onChoose={useMyLocation}
             />
           )}
