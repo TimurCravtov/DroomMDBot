@@ -55,8 +55,8 @@ func TestSearchParsesPlacesAndSkipsBrokenOnes(t *testing.T) {
 	if got[1].Label != "Strada Pușkin 12" {
 		t.Errorf("second label = %q, want street and house number", got[1].Label)
 	}
-	if got[1].Detail != "12, Centru, Chișinău" && got[1].Detail != "Centru, Chișinău, Moldova" {
-		t.Errorf("second detail = %q", got[1].Detail)
+	if got[1].Detail != "Centru, Chișinău, Moldova" {
+		t.Errorf("second detail = %q, want the area without repeating the title", got[1].Detail)
 	}
 }
 

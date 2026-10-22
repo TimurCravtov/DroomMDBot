@@ -177,8 +177,8 @@ func describe(p nominatimPlace) (label, detail string) {
 	// The rest of the display name, minus the title and noise like postcodes.
 	var rest []string
 	for _, part := range parts {
-		if part == "" || part == label || isPostcode(part) {
-			continue
+		if part == "" || strings.Contains(label, part) || isPostcode(part) {
+			continue // already in the title, or noise
 		}
 		rest = append(rest, part)
 		if len(rest) == 3 {
