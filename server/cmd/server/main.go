@@ -9,10 +9,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
 
+	"droommd/server/internal/bot"
 	"droommd/server/internal/config"
 	"droommd/server/internal/fleet"
 	"droommd/server/internal/geocode"
@@ -55,6 +57,8 @@ func main() {
 	}
 	defer db.Close()
 	log.Printf("database: %s", cfg.DBPath)
+
+	startBot(ctx, cfg)
 
 	if cfg.BackupEvery > 0 {
 		go backupLoop(ctx, db, cfg)
@@ -171,5 +175,23 @@ func backupLoop(ctx context.Context, db *store.Store, cfg config.Config) {
 			return
 		case <-tick.C:
 		}
+	}
+}
+
+// startBot starts the Telegram bot (/start with a button that opens the app) when it is
+// configured. It polls for messages, so only one instance may run per bot token: set
+// BOT_ENABLED=false anywhere else the same token is used, such as a development machine.
+func startBot(ctx context.Context, cfg config.Config) {
+	switch {
+	case cfg.BotToken == "":
+		return
+	case !cfg.BotEnabled:
+		log.Print("bot: off (BOT_ENABLED=false)")
+	case !strings.HasPrefix(cfg.AppURL, "https://"):
+		// Telegram only opens Mini Apps served over https.
+		log.Print("bot: not started: set APP_URL to the https address of the client, e.g. https://app.example.com")
+	default:
+		go bot.New(cfg.BotToken, cfg.AppURL).Run(ctx)
+		log.Printf("bot: answering /start with a button that opens %s", cfg.AppURL)
 	}
 }

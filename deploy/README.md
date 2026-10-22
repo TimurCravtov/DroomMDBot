@@ -64,13 +64,27 @@ Only `VITE_`-prefixed variables reach the browser, so never put secrets in them.
 
 ## 3. Telegram
 
-Telegram Mini Apps must be served over HTTPS, which Coolify already does.
+The server runs the bot itself (long polling, no webhook to set up). Add one more variable on
+the **server** resource:
 
-1. In [@BotFather](https://t.me/BotFather): **/mybots → your bot → Bot Settings → Menu Button
-   → Configure menu button**, and give it `https://app.example.com`. (Or **/newapp** for a
-   direct link `t.me/yourbot/app`.)
-2. Open the bot in Telegram and tap the menu button. Home, work and other saved places are
-   now stored per Telegram account, verified server-side.
+| Variable | Value |
+| --- | --- |
+| `APP_URL` | `https://app.example.com` — the client's address (must be `https`) |
+
+After the redeploy the logs say `bot: answering /start with a button that opens …`. In
+Telegram, send **/start** to your bot: it replies with a **Droom :: Routers 📌** button that
+opens the app. At startup the bot also sets its own command list and menu button, so there
+is nothing to configure in @BotFather beyond creating the bot.
+
+Run only **one** server with this token. A second instance (for example your laptop) would
+compete for the messages; set `BOT_ENABLED=false` there.
+
+Telegram Mini Apps must be served over HTTPS, which Coolify already does.
+1. Open the bot in Telegram, send **/start**, and tap the button (or use the menu button next
+   to the message box). Home, work and other saved places are now stored per Telegram
+   account, verified server-side.
+2. Optional: in [@BotFather](https://t.me/BotFather), **/newapp** gives the app a direct link
+   (`t.me/yourbot/app`) you can share.
 
 ## Testing in a plain browser
 

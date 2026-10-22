@@ -29,6 +29,8 @@ from `.env` in this directory (real environment variables win).
 | `GEOCODER_USER_AGENT` | `droommd-transit/…` | Nominatim's policy requires an identifying agent |
 | `WALKING_ROUTER_URL` | `https://routing.openstreetmap.de/routed-foot` | OSRM-compatible pedestrian router; `off` keeps straight walking legs |
 | `TELEGRAM_BOT_TOKEN` | empty | verifies Telegram Mini App sign-in (`initData`) |
+| `APP_URL` | empty | https address of the client; enables the bot's "open the app" button |
+| `BOT_ENABLED` | `true` | `false` stops the bot (use it on machines that share the production token) |
 | `AUTH_ALLOW_ANON` | `false` | `true` lets plain browsers use anonymous accounts, for testing |
 | `AUTH_MAX_AGE` | `24h` | how old Telegram launch data may be |
 | `DB_PATH` | `data/droommd.db` | SQLite database file (`/data/droommd.db` in Docker) |
@@ -56,6 +58,15 @@ from `.env` in this directory (real environment variables win).
 | `GET /healthz` | counts and the time of the last vehicle refresh |
 
 Response shapes mirror `../client/src/api/types.ts`.
+
+### The Telegram bot
+
+With `TELEGRAM_BOT_TOKEN` and `APP_URL` set, the server also runs the bot. It long-polls
+Telegram (no webhook or public endpoint needed) and answers `/start`, `/help` and `/app` in
+private chats with a message and a **Droom :: Routers 📌** button that opens the app as a
+Mini App. At startup it also registers the command list and sets the bot's menu button to
+open the app. Run one instance per token; use `BOT_ENABLED=false` for local runs that share
+the production token.
 
 ### Signing in
 
@@ -98,6 +109,7 @@ off-machine copies and restoring.
 cmd/server/          entry point: wiring and graceful shutdown
 internal/config/     environment and .env loading
 internal/auth/       Telegram initData verification, anonymous tokens, middleware
+internal/bot/        Telegram bot: /start with a button that opens the Mini App
 internal/store/      SQLite persistence of saved places, backups
 internal/tranzy/     upstream API client and wire types
 internal/geocode/    Nominatim client with caching and rate limiting

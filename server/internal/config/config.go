@@ -26,6 +26,8 @@ type Config struct {
 	AllowAnon     bool
 	AuthMaxAge    time.Duration
 	BackupDir     string
+	AppURL        string // the Mini App (the client), opened by the bot's button
+	BotEnabled    bool
 	BackupEvery   time.Duration // 0 turns backups off
 	BackupKeep    int
 	VehiclePoll   time.Duration
@@ -54,6 +56,8 @@ func Load() (Config, error) {
 		AllowAnon:     os.Getenv("AUTH_ALLOW_ANON") == "true",
 		AuthMaxAge:    24 * time.Hour,
 		BackupEvery:   24 * time.Hour,
+		AppURL:        strings.TrimRight(strings.TrimSpace(os.Getenv("APP_URL")), "/"),
+		BotEnabled:    os.Getenv("BOT_ENABLED") != "false",
 		BackupKeep:    7,
 		VehiclePoll:   5 * time.Second,
 		MaxVehicleAge: 5 * time.Minute,
