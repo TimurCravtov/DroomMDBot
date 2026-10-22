@@ -144,3 +144,43 @@ func TestSearchMergesABuildingWithTheShopInIt(t *testing.T) {
 		t.Fatalf("results = %+v, want one merged address result", got)
 	}
 }
+
+func TestQueryVariants(t *testing.T) {
+	got := queryVariants("sos hancesti 60/1")
+	want := []string{"sos hancesti 60/1", "Șoseaua hancesti 60/1", "sos hancesti", "Șoseaua hancesti"}
+	if len(got) != len(want) {
+		t.Fatalf("variants = %q, want %q", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("variant %d = %q, want %q", i, got[i], want[i])
+		}
+	}
+	if got := queryVariants("Universitatea"); len(got) != 1 {
+		t.Errorf("a plain word has nothing to expand or strip, got %q", got)
+	}
+}
+
+func TestSearchRetriesWithFriendlierQueries(t *testing.T) {
+	var asked []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query().Get("q")
+		asked = append(asked, q)
+		if q == "sos hancesti" { // only the street, without its house number, is known
+			w.Write([]byte(`[{"display_name":"Șoseaua Hâncești, Chișinău","name":"","lat":"47.0","lon":"28.8","address":{"road":"Șoseaua Hâncești"}}]`))
+			return
+		}
+		w.Write([]byte(`[]`))
+	}))
+	defer srv.Close()
+	c := New(srv.URL, "test-agent")
+	c.minInterval = time.Millisecond
+
+	got, err := c.Search(context.Background(), "sos hancesti 60/1")
+	if err != nil || len(got) != 1 || got[0].Label != "Șoseaua Hâncești" {
+		t.Fatalf("results=%+v err=%v, want the street found by the third attempt", got, err)
+	}
+	if len(asked) != 3 || asked[0] != "sos hancesti 60/1" || asked[2] != "sos hancesti" {
+		t.Errorf("queries asked = %q, want literal, expanded, then without the number", asked)
+	}
+}

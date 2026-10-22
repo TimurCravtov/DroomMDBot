@@ -105,3 +105,68 @@ func TestArrivalsUseProgressAlongTrip(t *testing.T) {
 		t.Errorf("stale ETA %ds should be below fresh ETA %ds", aged, fresh)
 	}
 }
+
+func TestSearchToleratesTyposButRanksExactMatchesFirst(t *testing.T) {
+	ds := &Dataset{
+		Routes: []Route{{ID: "1", Number: "5", Type: "bus", Name: "Aeroport - Hîncești"}},
+		Stops: []Stop{
+			{ID: "1", Name: "Piața Centrală"},
+			{ID: "2", Name: "Șoseaua Hîncești"},
+			{ID: "3", Name: "Centrul Comercial"},
+		},
+		stopRoutes: map[string][]string{},
+	}
+
+	names := func(r SearchResults) []string {
+		out := []string{}
+		for _, s := range r.Stops {
+			out = append(out, s.Name)
+		}
+		return out
+	}
+	contains := func(list []string, want string) bool {
+		for _, v := range list {
+			if v == want {
+				return true
+			}
+		}
+		return false
+	}
+
+	// "a" for "î": one letter off.
+	got := ds.Search("hancesti")
+	if !contains(names(got), "Șoseaua Hîncești") || len(got.Routes) != 1 {
+		t.Errorf("hancesti: stops=%v routes=%d, want the Hîncești stop and route", names(got), len(got.Routes))
+	}
+	// A missing letter.
+	if got := names(ds.Search("piata cntrala")); !contains(got, "Piața Centrală") {
+		t.Errorf("piata cntrala: stops=%v, want Piața Centrală", got)
+	}
+	// Exact matches come before fuzzy ones: "centr" is a real prefix of both stops here.
+	if got := names(ds.Search("central")); len(got) == 0 || got[0] != "Piața Centrală" {
+		t.Errorf("central: stops=%v, want the exact match first", got)
+	}
+	// Short words are never fuzzy, so they don't match half the stops.
+	if got := names(ds.Search("pia")); len(got) != 1 {
+		t.Errorf("pia: stops=%v, want only exact substring matches", got)
+	}
+	// Gibberish still finds nothing.
+	if got := ds.Search("zzzzzzzz"); len(got.Stops)+len(got.Routes) != 0 {
+		t.Errorf("gibberish matched %+v", got)
+	}
+}
+
+func TestEditDistance(t *testing.T) {
+	cases := []struct {
+		a, b string
+		want int
+	}{
+		{"", "", 0}, {"abc", "abc", 0}, {"abc", "abd", 1}, {"abc", "ab", 1},
+		{"hancesti", "hincesti", 1}, {"kitten", "sitting", 3}, {"", "abc", 3},
+	}
+	for _, c := range cases {
+		if got := editDistance(c.a, c.b); got != c.want {
+			t.Errorf("editDistance(%q, %q) = %d, want %d", c.a, c.b, got, c.want)
+		}
+	}
+}

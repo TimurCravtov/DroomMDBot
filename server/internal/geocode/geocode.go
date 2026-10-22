@@ -13,6 +13,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -82,24 +83,89 @@ func (c *Client) Search(ctx context.Context, query string) ([]Result, error) {
 	if e, ok := c.cache[key]; ok && time.Now().Before(e.expires) {
 		return e.results, nil
 	}
-	if wait := c.minInterval - time.Since(c.last); wait > 0 {
-		select {
-		case <-time.After(wait):
-		case <-ctx.Done():
-			return nil, ctx.Err()
+	if err := c.waitTurn(ctx); err != nil {
+		return nil, err
+	}
+
+	// If the query finds nothing, retry in friendlier forms: abbreviations spelled out,
+	// then without the house number (the street is better than no answer).
+	var results []Result
+	for i, variant := range queryVariants(query) {
+		if i > 0 {
+			if err := c.waitTurn(ctx); err != nil {
+				return nil, err
+			}
+		}
+		c.last = time.Now()
+		found, err := c.fetch(ctx, variant)
+		if err != nil {
+			return nil, err
+		}
+		if len(found) > 0 {
+			results = found
+			break
 		}
 	}
-	c.last = time.Now()
-
-	results, err := c.fetch(ctx, query)
-	if err != nil {
-		return nil, err
+	if results == nil {
+		results = []Result{}
 	}
 	if len(c.cache) >= cacheLimit {
 		c.cache = map[string]cacheEntry{} // crude but bounded; the cache is only an optimisation
 	}
 	c.cache[key] = cacheEntry{results: results, expires: time.Now().Add(cacheTTL)}
 	return results, nil
+}
+
+// waitTurn sleeps until the next upstream request is allowed. The caller holds c.mu.
+func (c *Client) waitTurn(ctx context.Context) error {
+	wait := c.minInterval - time.Since(c.last)
+	if wait <= 0 {
+		return nil
+	}
+	select {
+	case <-time.After(wait):
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// Romanian street-type abbreviations people type, and what OpenStreetMap spells out.
+var abbreviations = map[string]string{
+	"sos": "Șoseaua", "str": "Strada", "bd": "Bulevardul", "bul": "Bulevardul",
+	"b-dul": "Bulevardul", "al": "Aleea", "cal": "Calea", "pta": "Piața", "prov": "Provincial",
+}
+
+var trailingNumber = regexp.MustCompile(`\s+\d[\w/.-]*$`)
+
+// queryVariants lists the queries to try, most literal first: as typed, with abbreviations
+// expanded, then each of those without a trailing house number.
+func queryVariants(q string) []string {
+	words := strings.Fields(q)
+	for i, w := range words {
+		if full, ok := abbreviations[strings.ToLower(strings.TrimRight(w, "."))]; ok {
+			words[i] = full
+		}
+	}
+	expanded := strings.Join(words, " ")
+
+	var out []string
+	add := func(v string) {
+		v = strings.TrimSpace(v)
+		for _, have := range out {
+			if strings.EqualFold(have, v) {
+				return
+			}
+		}
+		if v != "" {
+			out = append(out, v)
+		}
+	}
+	add(q)
+	add(expanded)
+	add(trailingNumber.ReplaceAllString(q, ""))
+	add(trailingNumber.ReplaceAllString(expanded, ""))
+	return out
 }
 
 type nominatimPlace struct {
