@@ -1,0 +1,89 @@
+// Command server exposes live Chișinău public transport data (from the Tranzy
+// open data API) to the web client as a small JSON + server-sent-events API.
+package main
+
+import (
+	"context"
+	"errors"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"sync/atomic"
+	"syscall"
+	"time"
+
+	"droommd/server/internal/config"
+	"droommd/server/internal/fleet"
+	"droommd/server/internal/httpapi"
+	"droommd/server/internal/transit"
+	"droommd/server/internal/tranzy"
+)
+
+func main() {
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	up := tranzy.New(cfg.BaseURL, cfg.APIKey, cfg.AgencyID)
+
+	log.Printf("loading static feed (agency %s)…", cfg.AgencyID)
+	start := time.Now()
+	ds, err := transit.Load(ctx, up)
+	if err != nil {
+		log.Fatalf("loading static feed: %v", err)
+	}
+	log.Printf("loaded %d routes, %d stops, %d trips in %s",
+		len(ds.Routes), len(ds.Stops), ds.TripCount(), time.Since(start).Round(time.Millisecond))
+
+	var current atomic.Pointer[transit.Dataset]
+	current.Store(ds)
+	go refreshStatic(ctx, up, &current, cfg.StaticRefresh)
+
+	live := fleet.New()
+	go live.Run(ctx, up, &current, cfg)
+
+	srv := &http.Server{
+		Addr:              cfg.Addr,
+		Handler:           httpapi.New(cfg, &current, live).Handler(),
+		ReadHeaderTimeout: 10 * time.Second,
+		// No WriteTimeout: it would cut off the event stream.
+	}
+
+	go func() {
+		<-ctx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = srv.Shutdown(shutdownCtx)
+	}()
+
+	log.Printf("listening on %s", cfg.Addr)
+	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Fatal(err)
+	}
+}
+
+// refreshStatic reloads routes, stops and shapes periodically; a failed refresh
+// keeps serving the previous data.
+func refreshStatic(ctx context.Context, up *tranzy.Client, current *atomic.Pointer[transit.Dataset], every time.Duration) {
+	tick := time.NewTicker(every)
+	defer tick.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-tick.C:
+		}
+		ds, err := transit.Load(ctx, up)
+		if err != nil {
+			log.Printf("refreshing static feed: %v (keeping previous data)", err)
+			continue
+		}
+		current.Store(ds)
+		log.Printf("static feed refreshed: %d routes, %d stops", len(ds.Routes), len(ds.Stops))
+	}
+}
