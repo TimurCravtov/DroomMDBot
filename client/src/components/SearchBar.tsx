@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { TbArrowLeft, TbMap2, TbMapPin, TbPlus, TbSearch, TbX } from 'react-icons/tb';
+import { TbArrowLeft, TbChevronRight, TbMap2, TbMapPin, TbPlus, TbSearch, TbX } from 'react-icons/tb';
 import type { Place, Route, StopSearchResult, TransportType } from '../api';
 import { useSearch } from '../hooks/useTransport';
 import { PlaceIcon } from './PlaceIcon';
+import { RouteChecklistItems, toggleRoute } from './RouteChecklist';
 import { RouteNumber } from './RouteColors';
 import { TypeBadge, TYPE_LABEL } from './TypeBadge';
 import { TypeFilter } from './TypeFilter';
@@ -17,6 +18,11 @@ interface Props {
   hidden: boolean;
   /** Saved places, shown as quick chips under the empty search field. */
   places: Place[];
+  /** Every route, for the suggestions and the full list. */
+  routes: Route[];
+  /** Routes currently shown on the map. */
+  selectedRouteIds: string[];
+  onRoutesChange: (routeIds: string[]) => void;
   onSelectStop: (stopId: string) => void;
   onSelectRoute: (routeId: string) => void;
   onSelectPlace: (place: Place) => void;
@@ -27,6 +33,9 @@ interface Props {
 // style + compass buttons on the right, and is capped at 36rem when centered.
 const COLLAPSED_LEFT = 'max(4rem, calc(50% - 18rem))';
 const COLLAPSED_RIGHT = 'max(7rem, calc(50% - 18rem))';
+
+/** How many trolleybuses and how many buses are suggested under the empty field. */
+const SUGGESTED_PER_TYPE = 3;
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -72,6 +81,9 @@ export function SearchBar({
   onExpandedChange,
   hidden,
   places,
+  routes: allKnownRoutes,
+  selectedRouteIds,
+  onRoutesChange,
   onSelectStop,
   onSelectRoute,
   onSelectPlace,
@@ -79,12 +91,21 @@ export function SearchBar({
 }: Props) {
   const [query, setQuery] = useState('');
   const [type, setType] = useState<TransportType | null>(null);
+  // "View more": the full, filterable route list instead of the search results.
+  const [browsing, setBrowsing] = useState(false);
+  const [browseType, setBrowseType] = useState<TransportType | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const { data, loading } = useSearch(query);
 
   const hasQuery = query.trim() !== '';
   const showResults = expanded && hasQuery;
+  const showBrowse = expanded && browsing && !hasQuery;
+  const suggested = (['trolleybus', 'bus'] as const).flatMap((t) =>
+    allKnownRoutes.filter((r) => r.type === t).slice(0, SUGGESTED_PER_TYPE),
+  );
+  const browseRoutes = allKnownRoutes.filter((r) => browseType === null || r.type === browseType);
+  const toggle = (id: string) => onRoutesChange(toggleRoute(selectedRouteIds, id));
   const allRoutes: Route[] = data?.routes ?? [];
   const routes = allRoutes.filter((r) => type === null || r.type === type);
   const typesFound = new Set(allRoutes.map((r) => r.type));
@@ -98,9 +119,14 @@ export function SearchBar({
   const close = () => {
     setQuery('');
     setType(null);
+    setBrowsing(false);
+    setBrowseType(null);
     inputRef.current?.blur();
     onExpandedChange(false);
   };
+
+  // The back arrow and Escape step out of the full list first, then close the search.
+  const back = () => (browsing && !hasQuery ? setBrowsing(false) : close());
 
   const pick = (fn: () => void) => {
     fn();
@@ -109,7 +135,7 @@ export function SearchBar({
 
   // With nothing typed there is nothing to keep open: a click outside collapses the bar.
   useEffect(() => {
-    if (!expanded || hasQuery) return;
+    if (!expanded || hasQuery || browsing) return;
     const onPointerDown = (e: PointerEvent) => {
       if (!barRef.current?.contains(e.target as Node)) close();
     };
@@ -117,7 +143,7 @@ export function SearchBar({
     return () => document.removeEventListener('pointerdown', onPointerDown);
     // `close` only uses stable setters and refs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expanded, hasQuery]);
+  }, [expanded, hasQuery, browsing]);
 
   return (
     <>
@@ -139,7 +165,7 @@ export function SearchBar({
               type="button"
               aria-label="Close search"
               className={closeButton}
-              onClick={close}
+              onClick={back}
             >
               <TbArrowLeft className="h-5 w-5" />
             </button>
@@ -154,7 +180,7 @@ export function SearchBar({
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => onExpandedChange(true)}
             onKeyDown={(e) => {
-              if (e.key === 'Escape') close();
+              if (e.key === 'Escape') back();
               if (e.key === 'Enter') {
                 if (routes[0]) pick(() => onSelectRoute(routes[0].id));
                 else if (stops[0]) pick(() => onSelectStop(stops[0].id));
@@ -177,7 +203,7 @@ export function SearchBar({
           )}
         </label>
 
-        {expanded && !hasQuery && (
+        {expanded && !hasQuery && !browsing && (
           <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2 pt-2 [scrollbar-width:none]">
             <Chip
               icon={<PlaceIcon kind="home" className="h-4 w-4" />}
@@ -211,6 +237,83 @@ export function SearchBar({
             />
           </div>
         )}
+
+        {expanded && !hasQuery && !browsing && suggested.length > 0 && (
+          <div className={`mt-1 overflow-hidden rounded-2xl shadow-lg ${surface}`}>
+            <div className="flex items-center justify-between px-4 pb-1 pt-3">
+              <h2 className={`text-xs font-medium uppercase tracking-wide ${mutedText}`}>Routes</h2>
+              {selectedRouteIds.length > 0 && (
+                <button
+                  className={`text-xs underline-offset-2 hover:underline ${mutedText}`}
+                  onClick={() => onRoutesChange([])}
+                >
+                  Clear ({selectedRouteIds.length})
+                </button>
+              )}
+            </div>
+            <ul>
+              <RouteChecklistItems
+                routes={suggested}
+                selectedRouteIds={selectedRouteIds}
+                onToggle={toggle}
+              />
+            </ul>
+            <div className="flex border-t border-ink-200 dark:border-ink-700">
+              <button
+                className={`flex flex-1 items-center justify-center gap-1 py-2.5 text-sm font-medium ${hoverRow}`}
+                onClick={() => setBrowsing(true)}
+              >
+                View more routes
+                <TbChevronRight className="h-4 w-4" />
+              </button>
+              {selectedRouteIds.length > 0 && (
+                <button
+                  className="border-l border-ink-200 px-4 text-sm font-semibold hover:bg-ink-50 dark:border-ink-700 dark:hover:bg-ink-700"
+                  onClick={close}
+                >
+                  Show {selectedRouteIds.length}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div
+        className={`fixed inset-0 z-[999] flex flex-col bg-ink-50 pt-20 transition-opacity duration-300 dark:bg-ink-900 ${
+          showBrowse ? 'opacity-100' : 'pointer-events-none opacity-0'
+        }`}
+        inert={!showBrowse}
+      >
+        <div className="mx-auto flex min-h-0 w-full max-w-2xl flex-1 flex-col px-4">
+          <TypeFilter value={browseType} onChange={setBrowseType} showLabels className="pb-3 pt-3" />
+          <ul className={`min-h-0 flex-1 overflow-y-auto rounded-2xl ${surface}`}>
+            <RouteChecklistItems
+              routes={browseRoutes}
+              selectedRouteIds={selectedRouteIds}
+              onToggle={toggle}
+              roomy
+            />
+          </ul>
+          <div className="flex items-center gap-3 py-4">
+            <button
+              className="flex-1 rounded-full bg-ink-900 py-2.5 text-sm font-semibold text-white dark:bg-white dark:text-ink-900"
+              onClick={close}
+            >
+              {selectedRouteIds.length > 0
+                ? `Show ${selectedRouteIds.length} route${selectedRouteIds.length === 1 ? '' : 's'}`
+                : 'Done'}
+            </button>
+            {selectedRouteIds.length > 0 && (
+              <button
+                className="rounded-full px-4 py-2.5 text-sm hover:bg-ink-100 dark:hover:bg-ink-700"
+                onClick={() => onRoutesChange([])}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       <div

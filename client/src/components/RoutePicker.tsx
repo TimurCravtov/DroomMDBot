@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { TbCheck, TbRoute } from 'react-icons/tb';
 import type { Route, TransportType } from '../api';
-import { RouteNumber } from './RouteColors';
-import { TypeBadge } from './TypeBadge';
+import { RouteChecklistItems, toggleRoute } from './RouteChecklist';
 import { TypeFilter } from './TypeFilter';
 import { hoverRow, mutedText, roundButton, surface } from './ui';
 
@@ -31,13 +30,6 @@ export function RoutePicker({ routes, selectedRouteIds, onChange }: Props) {
 
   const visible = routes.filter((r) => type === null || r.type === type);
   const noneSelected = selectedRouteIds.length === 0;
-
-  const toggle = (id: string) =>
-    onChange(
-      selectedRouteIds.includes(id)
-        ? selectedRouteIds.filter((x) => x !== id)
-        : [...selectedRouteIds, id],
-    );
 
   return (
     <div ref={rootRef} className="relative">
@@ -76,36 +68,11 @@ export function RoutePicker({ routes, selectedRouteIds, onChange }: Props) {
                 {noneSelected && <TbCheck className="h-4 w-4" />}
               </button>
             </li>
-            {visible.map((r) => {
-              const checked = selectedRouteIds.includes(r.id);
-              return (
-                <li key={r.id}>
-                  <button
-                    role="checkbox"
-                    aria-checked={checked}
-                    className={`flex w-full items-center gap-3 px-4 py-2.5 text-left ${hoverRow}`}
-                    onClick={() => toggle(r.id)}
-                  >
-                    <RouteNumber routeId={r.id} number={r.number} type={r.type} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm">{r.name}</span>
-                      <span className="mt-0.5 block">
-                        <TypeBadge type={r.type} />
-                      </span>
-                    </span>
-                    <span
-                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
-                        checked
-                          ? 'border-ink-900 bg-ink-900 text-white dark:border-white dark:bg-white dark:text-ink-900'
-                          : 'border-ink-300 dark:border-ink-600'
-                      }`}
-                    >
-                      {checked && <TbCheck className="h-4 w-4" />}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
+            <RouteChecklistItems
+              routes={visible}
+              selectedRouteIds={selectedRouteIds}
+              onToggle={(id) => onChange(toggleRoute(selectedRouteIds, id))}
+            />
             {visible.length === 0 && (
               <li className={`px-4 py-3 text-sm ${mutedText}`}>No routes of this type.</li>
             )}

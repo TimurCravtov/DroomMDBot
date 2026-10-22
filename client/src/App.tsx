@@ -146,6 +146,9 @@ export function App() {
           onExpandedChange={setSearchOpen}
           hidden={picking}
           places={places}
+          routes={routes}
+          selectedRouteIds={routeIds}
+          onRoutesChange={setRouteIds}
           onSelectStop={selectStop}
           onSelectPlace={focusPlace}
           onShortcut={handleShortcut}
