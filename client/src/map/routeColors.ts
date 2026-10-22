@@ -1,65 +1,44 @@
 import type { Route, TransportType } from '../api';
 
-// Pantone-inspired palettes. Pantone does not publish official screen values, so the
-// hexes are common sRGB approximations of the named colors. Trolleybuses get warm
-// tones and buses cool/earthy ones, so the vehicle type reads at a glance while each
-// route still has its own color. No blues, to match the rest of the interface.
-export const PALETTES: Record<TransportType, string[]> = {
-  trolleybus: [
-    '#DD4124', // Tangerine Tango
-    '#9B1B30', // Chili Pepper
-    '#D94F70', // Honeysuckle
-    '#E3873A', // Amberglow
-    '#955251', // Marsala
-    '#C74375', // Fuchsia Rose
-    '#F2A900', // Marigold
-    '#FF6F61', // Living Coral
-    '#A0522D', // Sienna
-    '#B76E79', // Rose Gold
-    '#C1440E', // Burnt Orange
-    '#EFC050', // Mimosa
-    '#BD3D3A', // Cardinal
-    '#E9897E', // Coral Pink
-    '#800F2F', // Burgundy
-    '#CE5B78', // Dusty Rose
-  ],
-  bus: [
-    '#009473', // Emerald
-    '#5F4B8B', // Ultra Violet
-    '#88B04B', // Greenery
-    '#B163A3', // Radiant Orchid
-    '#006E51', // Lush Meadow
-    '#926AA6', // Amethyst Orchid
-    '#55B4B0', // Turquoise
-    '#7C8F68', // Sage
-    '#8E6BB0', // Royal Lilac
-    '#4F6D4F', // Kale
-    '#9DA94B', // Linden Green
-    '#7F5A83', // Chinese Violet
-    '#3F8E7E', // Deep Lichen
-    '#B5A642', // Olive Gold
-    '#2F7F6F', // Ivy
-    '#8D8F5E', // Dried Herb
-  ],
-  minibus: [
-    '#D97B29', // Autumn Maple
-    '#7B6D8D', // Lavender Gray
-    '#A65E2E', // Cinnamon
-    '#6F8F72', // Hedge Green
-  ],
-};
+// Pantone-inspired colors spread around the whole color wheel. Pantone does not
+// publish official screen values, so these are sRGB approximations in the spirit of
+// the named shades. Consecutive entries are far apart in hue (red, blue, yellow,
+// green, orchid, orange...) so neighbouring route numbers are easy to tell apart.
+export const PALETTE = [
+  '#D62839', // Fiery Red
+  '#0072CE', // French Blue
+  '#F5B700', // Empire Yellow
+  '#2F9E5B', // Foliage Green
+  '#B14AB5', // Radiant Orchid
+  '#F26B21', // Orange Pop
+  '#0097A7', // Peacock
+  '#E5678F', // Azalea Pink
+  '#4B4FB8', // Blue Iris
+  '#A6C614', // Lime Punch
+  '#8C5A3C', // Chocolate
+  '#3FA7E0', // Little Boy Blue
+  '#8E1B3A', // Wine
+  '#00997A', // Emerald
+  '#7E4BC2', // Ultra Violet
+  '#D6389A', // Raspberry
+  '#5CC9A7', // Mint
+  '#7E8B2E', // Olive
+];
+
+// Trolleybuses and buses share the palette but start at different points, so routes
+// that carry the same number on both types still differ in color.
+const START: Record<TransportType, number> = { trolleybus: 0, bus: 9, minibus: 4 };
 
 /**
- * Gives every route its own color. Routes of one type take colors from that type's
- * palette in list order (the API lists them by number), so neighbouring numbers
- * differ; the palette repeats only after a full cycle.
+ * Gives every route its own color. Routes of one type take colors in list order (the
+ * API lists them by number), so neighbouring numbers differ; the palette repeats only
+ * after a full cycle of 18.
  */
 export function buildRouteColors(routes: Route[]): Record<string, string> {
   const used: Record<TransportType, number> = { trolleybus: 0, bus: 0, minibus: 0 };
   const colors: Record<string, string> = {};
   for (const route of routes) {
-    const palette = PALETTES[route.type];
-    colors[route.id] = palette[used[route.type]++ % palette.length];
+    colors[route.id] = PALETTE[(START[route.type] + used[route.type]++) % PALETTE.length];
   }
   return colors;
 }
