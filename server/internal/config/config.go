@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -23,6 +25,9 @@ type Config struct {
 	BotToken      string
 	AllowAnon     bool
 	AuthMaxAge    time.Duration
+	BackupDir     string
+	BackupEvery   time.Duration // 0 turns backups off
+	BackupKeep    int
 	VehiclePoll   time.Duration
 	MaxVehicleAge time.Duration
 	StaticRefresh time.Duration
@@ -48,9 +53,29 @@ func Load() (Config, error) {
 		BotToken:      os.Getenv("TELEGRAM_BOT_TOKEN"),
 		AllowAnon:     os.Getenv("AUTH_ALLOW_ANON") == "true",
 		AuthMaxAge:    24 * time.Hour,
+		BackupEvery:   24 * time.Hour,
+		BackupKeep:    7,
 		VehiclePoll:   5 * time.Second,
 		MaxVehicleAge: 5 * time.Minute,
 		StaticRefresh: 6 * time.Hour,
+	}
+	// Backups sit next to the database, so they land in the same persistent volume.
+	cfg.BackupDir = envOr("BACKUP_DIR", filepath.Join(filepath.Dir(cfg.DBPath), "backups"))
+	if v := os.Getenv("BACKUP_EVERY"); v == "0" || v == "off" {
+		cfg.BackupEvery = 0
+	} else if v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil || d <= 0 {
+			return cfg, fmt.Errorf("BACKUP_EVERY: %q is not a positive duration (or \"off\")", v)
+		}
+		cfg.BackupEvery = d
+	}
+	if v := os.Getenv("BACKUP_KEEP"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 1 {
+			return cfg, fmt.Errorf("BACKUP_KEEP: %q is not a positive number", v)
+		}
+		cfg.BackupKeep = n
 	}
 	if cfg.APIKey == "" {
 		return cfg, errors.New("TRANZY_API_KEY is not set (put it in .env or the environment)")

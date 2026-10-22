@@ -28,6 +28,12 @@ from `.env` in this directory or the repository root (real environment variables
 | `GEOCODER_URL` | `https://nominatim.openstreetmap.org` | any Nominatim-compatible service |
 | `GEOCODER_USER_AGENT` | `droommd-transit/…` | Nominatim's policy requires an identifying agent |
 | `WALKING_ROUTER_URL` | `https://routing.openstreetmap.de/routed-foot` | OSRM-compatible pedestrian router; `off` keeps straight walking legs |
+| `TELEGRAM_BOT_TOKEN` | empty | verifies Telegram Mini App sign-in (`initData`) |
+| `AUTH_ALLOW_ANON` | `false` | `true` lets plain browsers use anonymous accounts, for testing |
+| `AUTH_MAX_AGE` | `24h` | how old Telegram launch data may be |
+| `DB_PATH` | `data/droommd.db` | SQLite database file (`/data/droommd.db` in Docker) |
+| `BACKUP_EVERY` | `24h` | database snapshot interval; `off` disables |
+| `BACKUP_KEEP` | `7` | how many snapshots to keep, in `<DB_PATH dir>/backups` |
 | `CORS_ORIGIN` | empty | set to allow another origin; the Vite dev proxy doesn't need it |
 
 ## API
@@ -43,9 +49,32 @@ from `.env` in this directory or the repository root (real environment variables
 | `GET /api/plan?from=lat,lng&to=lat,lng` | up to four itineraries (walk + ride legs), fastest first |
 | `GET /api/vehicles?routes=1,2` | current vehicles, optionally for some routes only |
 | `GET /api/vehicles/stream?routes=1,2` | the same as server-sent events, one per refresh |
+| `GET /api/me/places` | the caller's saved places (needs sign-in, see below) |
+| `POST /api/me/places` | save a place: `{kind, label, lat, lng, address?, icon?}` (home/work replace the old one) |
+| `DELETE /api/me/places/{id}` | delete one of the caller's places |
+| `DELETE /api/me` | erase the caller's account and all their data |
 | `GET /healthz` | counts and the time of the last vehicle refresh |
 
 Response shapes mirror `../client/src/api/types.ts`.
+
+### Signing in
+
+`/api/me/*` identifies the caller by the `Authorization` header:
+
+- `tma <initData>`: a Telegram Mini App. The signed launch data is verified with the bot
+  token (HMAC-SHA256) and must be younger than `AUTH_MAX_AGE`; the user is `tg:<id>`.
+- `anon <token>`: a browser's random 32+ character token, honoured only when
+  `AUTH_ALLOW_ANON=true`; the user is `anon:<hash of the token>`. Anonymous ids can never
+  collide with Telegram ones.
+
+Everything else (`/api/routes`, `/api/vehicles`, …) is public.
+
+### Storage
+
+Saved places live in SQLite (pure-Go driver, no cgo, so the binary is static). One home and
+one work place per user, at most 50 places each. The server snapshots the database
+daily with `VACUUM INTO`, keeping the newest 7. See `../deploy/README.md` for volumes,
+off-machine copies and restoring.
 
 ### Things to know
 
@@ -68,6 +97,8 @@ Response shapes mirror `../client/src/api/types.ts`.
 ```
 cmd/server/          entry point: wiring and graceful shutdown
 internal/config/     environment and .env loading
+internal/auth/       Telegram initData verification, anonymous tokens, middleware
+internal/store/      SQLite persistence of saved places, backups
 internal/tranzy/     upstream API client and wire types
 internal/geocode/    Nominatim client with caching and rate limiting
 internal/walking/    pedestrian router client (street-following walking paths)
@@ -76,6 +107,15 @@ internal/fleet/      live vehicle polling, snapshot and subscriptions
 internal/httpapi/    HTTP handlers, SSE, middleware
 internal/geo/        distances, bearings, progress along a polyline
 ```
+
+## Docker
+
+```sh
+docker compose up -d --build     # from the repository root; data in the droommd-data volume
+```
+
+The `Dockerfile` builds a static binary into a distroless image that runs as a non-root user
+with `/data` as its volume. For Coolify see `../deploy/README.md`.
 
 ## Test
 

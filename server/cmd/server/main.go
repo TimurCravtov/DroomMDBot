@@ -51,6 +51,12 @@ func main() {
 	defer db.Close()
 	log.Printf("database: %s", cfg.DBPath)
 
+	if cfg.BackupEvery > 0 {
+		go backupLoop(ctx, db, cfg)
+	} else {
+		log.Print("database backups are off (BACKUP_EVERY)")
+	}
+
 	up := tranzy.New(cfg.BaseURL, cfg.APIKey, cfg.AgencyID)
 
 	log.Printf("loading static feed (agency %s)…", cfg.AgencyID)
@@ -138,4 +144,27 @@ func healthcheck() int {
 		return 1
 	}
 	return 0
+}
+
+// backupLoop keeps rolling backups of the database next to it: one every cfg.BackupEvery,
+// the newest cfg.BackupKeep kept. It checks hourly (or more often for short intervals), so a
+// restart never skips a backup that is due and never makes a redundant one.
+func backupLoop(ctx context.Context, db *store.Store, cfg config.Config) {
+	check := min(cfg.BackupEvery, time.Hour)
+	tick := time.NewTicker(check)
+	defer tick.Stop()
+	for {
+		made, err := db.BackupIfDue(ctx, cfg.BackupDir, cfg.BackupEvery, cfg.BackupKeep, time.Now())
+		switch {
+		case err != nil:
+			log.Printf("database backup failed: %v", err)
+		case made:
+			log.Printf("database backed up to %s (keeping %d)", cfg.BackupDir, cfg.BackupKeep)
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-tick.C:
+		}
+	}
 }
