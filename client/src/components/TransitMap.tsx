@@ -254,6 +254,8 @@ export function TransitMap({
       initialViewState={{ longitude: CHISINAU[0], latitude: CHISINAU[1], zoom: 14 }}
       mapStyle={(MAP_STYLES.find((s) => s.id === mapStyleId) ?? MAP_STYLES[0]).style}
       maxPitch={0}
+      // Credits live in <MapCredits>: a tiny © that opens the full list.
+      attributionControl={false}
       interactiveLayerIds={[STOPS_LAYER, VEHICLE_LAYER]}
       cursor={overStop ? 'pointer' : undefined}
       onMouseEnter={() => setOverStop(true)}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrivalsPanel } from './components/ArrivalsPanel';
 import { CompassButton, LocateButton, ZoomButtons } from './components/MapControls';
+import { MapCredits } from './components/MapCredits';
 import { RoutePicker } from './components/RoutePicker';
 import { DirectionsPanel } from './components/DirectionsPanel';
 import { PickLocation, type PickedLocation, type PickPurpose } from './components/PickLocation';
@@ -179,6 +180,8 @@ export function App() {
             onSelectVehicle={selectVehicle}
           />
         </div>
+
+        <MapCredits mapStyleId={mapStyleId} />
 
         <div className={`absolute bottom-10 right-3 z-10 flex items-center gap-2 ${hideOnlyWhenSearching}`}>
           <ZoomButtons />
