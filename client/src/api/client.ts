@@ -1,5 +1,6 @@
 import type {
   Arrival,
+  GeocodeResult,
   LocationInfo,
   NewPlace,
   Place,
@@ -24,6 +25,8 @@ export interface TransportClient {
   /** Saving a home or work place replaces the previous one of that kind. */
   savePlace(place: NewPlace): Promise<Place>;
   deletePlace(placeId: string): Promise<void>;
+  /** Finds street addresses matching free text. */
+  geocode(query: string): Promise<GeocodeResult[]>;
   /** Describes an arbitrary map point, e.g. for a dropped pin. */
   describeLocation(lat: number, lng: number): Promise<LocationInfo>;
   /**

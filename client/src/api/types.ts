@@ -48,11 +48,19 @@ export interface Place {
   id: string;
   kind: PlaceKind;
   label: string;
+  /** Street address, when the place was found by address. */
+  address?: string;
   lat: number;
   lng: number;
 }
 
 export type NewPlace = Omit<Place, 'id'>;
+
+export interface GeocodeResult {
+  label: string;
+  lat: number;
+  lng: number;
+}
 
 export interface LocationInfo {
   /** Human-readable description of the point, e.g. "Near Piața Centrală". */

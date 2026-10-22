@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { TbMapPinFilled, TbX } from 'react-icons/tb';
+import { TbMapPin, TbMapPinFilled, TbSearch, TbX } from 'react-icons/tb';
 import { useMap } from 'react-map-gl/maplibre';
-import type { PlaceKind } from '../api';
-import { useLocationInfo } from '../hooks/useTransport';
+import type { GeocodeResult, PlaceKind } from '../api';
+import { useGeocode, useLocationInfo } from '../hooks/useTransport';
 import { MAP_ID } from './TransitMap';
 import { closeButton, mutedText, surface } from './ui';
 
@@ -13,6 +13,8 @@ export interface PickedLocation {
   name: string;
   /** Description of the point from the transport client. */
   description: string;
+  /** Street address, if one was chosen and the pin hasn't been moved away from it. */
+  address: string | null;
 }
 
 interface Props {
@@ -28,12 +30,39 @@ const TITLES: Record<PlaceKind, string> = {
   pin: 'Select on map',
 };
 
+/** Roughly how far (m) the pin may drift from a chosen address before it stops counting. */
+const ADDRESS_TOLERANCE_M = 30;
+
+function approxDistanceMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const dLat = (a.lat - b.lat) * 111_000;
+  const dLng = (a.lng - b.lng) * 111_000 * Math.cos((a.lat * Math.PI) / 180);
+  return Math.hypot(dLat, dLng);
+}
+
 /** Fixed pin in the middle of the screen; the user pans the map under it and confirms. */
 export function PickLocation({ purpose, onConfirm, onCancel }: Props) {
   const map = useMap()[MAP_ID];
   const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [name, setName] = useState('');
+  const [addressQuery, setAddressQuery] = useState('');
+  const [chosen, setChosen] = useState<GeocodeResult | null>(null);
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const info = useLocationInfo(center);
+  const suggestions = useGeocode(addressQuery);
+  const canSearchAddress = purpose !== 'pin';
+
+  // Dragging the pin away from the chosen address drops that address.
+  const address =
+    chosen && center && approxDistanceMeters(center, chosen) <= ADDRESS_TOLERANCE_M
+      ? chosen.label
+      : null;
+
+  const chooseAddress = (result: GeocodeResult) => {
+    setChosen(result);
+    setAddressQuery(result.label);
+    setSuggestionsOpen(false);
+    map?.flyTo({ center: [result.lng, result.lat], zoom: Math.max(map.getZoom(), 17) });
+  };
 
   useEffect(() => {
     if (!map) return;
@@ -50,7 +79,7 @@ export function PickLocation({ purpose, onConfirm, onCancel }: Props) {
 
   const confirm = () => {
     if (!center) return;
-    onConfirm({ ...center, name, description: info?.label ?? 'Dropped pin' });
+    onConfirm({ ...center, name, description: info?.label ?? 'Dropped pin', address });
   };
 
   return (
@@ -81,6 +110,37 @@ export function PickLocation({ purpose, onConfirm, onCancel }: Props) {
             <p className={`mt-0.5 text-xs ${mutedText}`}>
               Nearest stop: {info.nearestStop.name} · {info.distanceMeters} m
             </p>
+          )}
+
+          {canSearchAddress && (
+            <div className="relative mt-3">
+              <TbSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
+              <input
+                value={addressQuery}
+                placeholder="Search by address"
+                className="w-full rounded-lg bg-ink-100 py-2 pl-9 pr-3 text-sm outline-none placeholder:text-ink-400 focus:ring-2 focus:ring-ink-400 dark:bg-ink-900"
+                onChange={(e) => {
+                  setAddressQuery(e.target.value);
+                  setSuggestionsOpen(true);
+                }}
+                onFocus={() => setSuggestionsOpen(true)}
+              />
+              {suggestionsOpen && suggestions.length > 0 && (
+                <ul className={`absolute inset-x-0 bottom-full z-10 mb-1 overflow-hidden rounded-xl shadow-lg ${surface}`}>
+                  {suggestions.map((s) => (
+                    <li key={s.label}>
+                      <button
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-ink-100 dark:hover:bg-ink-700"
+                        onClick={() => chooseAddress(s)}
+                      >
+                        <TbMapPin className="h-4 w-4 shrink-0 text-ink-400" />
+                        <span className="truncate">{s.label}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           )}
 
           {purpose === 'custom' && (

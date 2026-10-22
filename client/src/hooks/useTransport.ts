@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTransportClient } from '../api/context';
 import type {
   Arrival,
+  GeocodeResult,
   LocationInfo,
   NewPlace,
   Place,
@@ -170,4 +171,28 @@ export function useLocationInfo(
   }, [client, lat, lng, debounceMs]);
 
   return info;
+}
+
+/** Debounced address lookup; empty for an empty query. */
+export function useGeocode(query: string, debounceMs = 200): GeocodeResult[] {
+  const client = useTransportClient();
+  const [results, setResults] = useState<GeocodeResult[]>([]);
+
+  useEffect(() => {
+    const q = query.trim();
+    if (!q) {
+      setResults([]);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      void client.geocode(q).then((r) => !cancelled && setResults(r));
+    }, debounceMs);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [client, query, debounceMs]);
+
+  return results;
 }

@@ -1,6 +1,7 @@
 import type { TransportClient } from '../client';
 import type {
   Arrival,
+  GeocodeResult,
   LocationInfo,
   NewPlace,
   Place,
@@ -11,7 +12,7 @@ import type {
   Unsubscribe,
   Vehicle,
 } from '../types';
-import { MOCK_ROUTES, MOCK_STOPS } from './data';
+import { MOCK_ADDRESSES, MOCK_ROUTES, MOCK_STOPS } from './data';
 import { distanceMeters } from './geo';
 import { buildLoop, positionAt, type Loop } from './loop';
 
@@ -154,6 +155,14 @@ export class MockEasyWayClient implements TransportClient {
     this.places = this.places.filter((p) => p.id !== placeId);
     this.persistPlaces();
     return this.respond(undefined);
+  }
+
+  geocode(query: string): Promise<GeocodeResult[]> {
+    const words = normalize(query.trim()).split(/\s+/).filter(Boolean);
+    if (words.length === 0) return this.respond([]);
+    return this.respond(
+      MOCK_ADDRESSES.filter((a) => words.every((w) => normalize(a.label).includes(w))).slice(0, 5),
+    );
   }
 
   describeLocation(lat: number, lng: number): Promise<LocationInfo> {

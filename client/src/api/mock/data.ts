@@ -14,6 +14,20 @@ export const MOCK_STOPS: Stop[] = [
   { id: 's10', name: 'Universitatea de Stat', lat: 47.0196, lng: 28.8283 },
 ];
 
+// Approximate positions of made-up street numbers.
+export const MOCK_ADDRESSES: { label: string; lat: number; lng: number }[] = [
+  { label: 'Strada Alexei Mateevici 60', lat: 47.0215, lng: 28.8252 },
+  { label: 'Bulevardul Ștefan cel Mare și Sfânt 148', lat: 47.0247, lng: 28.8323 },
+  { label: 'Strada Pușkin 24', lat: 47.0235, lng: 28.836 },
+  { label: 'Strada București 67', lat: 47.0217, lng: 28.833 },
+  { label: 'Strada Vlaicu Pârcălab 43', lat: 47.0262, lng: 28.8355 },
+  { label: 'Strada Columna 106', lat: 47.0226, lng: 28.8346 },
+  { label: 'Bulevardul Dacia 20', lat: 46.9985, lng: 28.859 },
+  { label: 'Bulevardul Grigore Vieru 20', lat: 47.02, lng: 28.841 },
+  { label: 'Calea Ieșilor 10', lat: 47.043, lng: 28.812 },
+  { label: 'Strada Ismail 83', lat: 47.03, lng: 28.85 },
+];
+
 /** Every mock route is a loop through its stops in order. */
 export const MOCK_ROUTES: Route[] = [
   {

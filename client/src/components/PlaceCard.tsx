@@ -22,7 +22,7 @@ export function PlaceCard({ place, onClose, onRemove, onShowStop }: Props) {
         <PlaceIcon kind={place.kind} className="mt-0.5 h-5 w-5 shrink-0" />
         <div className="min-w-0 flex-1">
           <h2 className="text-base font-semibold leading-tight">{place.label}</h2>
-          <p className={`text-xs ${mutedText}`}>{info?.label ?? 'Locating…'}</p>
+          <p className={`text-xs ${mutedText}`}>{place.address ?? info?.label ?? 'Locating…'}</p>
         </div>
         <button aria-label="Close" className={closeButton} onClick={onClose}>
           <TbX className="h-5 w-5" />

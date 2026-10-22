@@ -73,8 +73,14 @@ export function App() {
       return;
     }
     const label =
-      purpose === 'home' ? 'Home' : purpose === 'work' ? 'Work' : picked.name.trim() || picked.description;
-    focusPlace(await savePlace({ kind: purpose, label, lat, lng }));
+      purpose === 'home'
+        ? 'Home'
+        : purpose === 'work'
+          ? 'Work'
+          : picked.name.trim() || picked.address || picked.description;
+    focusPlace(
+      await savePlace({ kind: purpose, label, lat, lng, address: picked.address ?? undefined }),
+    );
   };
 
   const showStopArrivals = (stop: Stop) => selectStop(stop.id);
