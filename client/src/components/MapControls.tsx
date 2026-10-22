@@ -47,7 +47,12 @@ export function LocateButton({ onLocated }: { onLocated: (location: UserLocation
     setStatus('locating');
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
-        onLocated({ lng: coords.longitude, lat: coords.latitude, accuracy: coords.accuracy });
+        onLocated({
+          lng: coords.longitude,
+          lat: coords.latitude,
+          accuracy: coords.accuracy,
+          heading: coords.heading,
+        });
         map.flyTo({
           center: [coords.longitude, coords.latitude],
           zoom: Math.max(map.getZoom(), 16),

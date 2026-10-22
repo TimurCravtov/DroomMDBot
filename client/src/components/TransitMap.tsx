@@ -16,6 +16,7 @@ import type { UserLocation } from '../map/types';
 import { PlaceIcon } from './PlaceIcon';
 import { useRouteColors } from './RouteColors';
 import { TypeIcon } from './TypeBadge';
+import { UserLocationMarker } from './UserLocationMarker';
 import { TYPE_COLOR } from './typeStyles';
 
 type LngLat = [number, number];
@@ -293,11 +294,7 @@ export function TransitMap({
         );
       })}
 
-      {userLocation && (
-        <Marker longitude={userLocation.lng} latitude={userLocation.lat}>
-          <div className="h-4 w-4 rounded-full border-2 border-white bg-ink-900 shadow-md ring-4 ring-ink-900/25 dark:bg-white dark:ring-white/25" />
-        </Marker>
-      )}
+      {userLocation && <UserLocationMarker location={userLocation} />}
 
       {/* Far away: plain colored dots, drawn by the map itself. */}
       <Source id="vehicles" type="geojson" data={vehiclesGeoJson}>
