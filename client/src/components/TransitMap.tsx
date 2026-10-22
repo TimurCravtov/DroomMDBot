@@ -2,9 +2,10 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import '../map/setupMapLibre';
 import { useEffect, useState } from 'react';
 import { Layer, Map as MapGL, Marker, Source, useMap } from 'react-map-gl/maplibre';
-import type { Route, Stop, Vehicle } from '../api';
+import type { Place, Route, Stop, Vehicle } from '../api';
 import { MAP_STYLES, type MapStyleId } from '../map/mapStyles';
 import type { UserLocation } from '../map/types';
+import { PlaceIcon } from './PlaceIcon';
 import { TypeIcon } from './TypeBadge';
 import { TYPE_COLOR } from './typeStyles';
 
@@ -23,20 +24,26 @@ interface Props {
   routes: Route[];
   vehicles: Vehicle[];
   selectedStop: Stop | null;
+  /** Saved places plus the dropped pin, if any. */
+  places: Place[];
+  focusedPlace: Place | null;
   /** Paths of these routes are drawn and framed. */
   selectedRoutes: Route[];
   userLocation: UserLocation | null;
   mapStyleId: MapStyleId;
   onSelectStop: (stopId: string) => void;
+  onSelectPlace: (place: Place) => void;
 }
 
 /** Moves the viewport when the selected stop or route changes. */
 function ViewController({
   selectedStop,
+  focusedPlace,
   routePoints,
   routesKey,
 }: {
   selectedStop: Stop | null;
+  focusedPlace: Place | null;
   /** Every point of every selected route, used to frame them all. */
   routePoints: LngLat[];
   routesKey: string;
@@ -51,6 +58,15 @@ function ViewController({
       });
     }
   }, [map, selectedStop?.id]);
+
+  useEffect(() => {
+    if (map && focusedPlace) {
+      map.flyTo({
+        center: [focusedPlace.lng, focusedPlace.lat],
+        zoom: Math.max(map.getZoom(), 16),
+      });
+    }
+  }, [map, focusedPlace?.id]);
 
   useEffect(() => {
     if (!map || routePoints.length === 0) return;
@@ -73,10 +89,13 @@ export function TransitMap({
   routes,
   vehicles,
   selectedStop,
+  places,
+  focusedPlace,
   selectedRoutes,
   userLocation,
   mapStyleId,
   onSelectStop,
+  onSelectPlace,
 }: Props) {
   // Only the threshold crossing is stored, so panning and zooming don't re-render every frame.
   const [closeEnough, setCloseEnough] = useState(false);
@@ -102,6 +121,7 @@ export function TransitMap({
     >
       <ViewController
         selectedStop={selectedStop}
+        focusedPlace={focusedPlace}
         routePoints={routePaths.flatMap((p) => p.path)}
         routesKey={selectedRoutes.map((r) => r.id).join(',')}
       />
@@ -142,6 +162,24 @@ export function TransitMap({
                 selected ? 'h-5 w-5 bg-yellow-400' : 'h-3.5 w-3.5 bg-white'
               }`}
             />
+          </Marker>
+        );
+      })}
+
+      {places.map((p) => {
+        const focused = p.id === focusedPlace?.id;
+        return (
+          <Marker key={p.id} longitude={p.lng} latitude={p.lat} style={{ zIndex: focused ? 9 : 5 }}>
+            <button
+              title={p.label}
+              aria-label={p.label}
+              onClick={() => onSelectPlace(p)}
+              className={`flex items-center justify-center rounded-full bg-ink-900 text-white shadow-lg ring-2 ring-white dark:bg-white dark:text-ink-900 dark:ring-ink-900 ${
+                focused ? 'h-9 w-9' : 'h-7 w-7'
+              }`}
+            >
+              <PlaceIcon kind={p.kind} className={focused ? 'h-5 w-5' : 'h-4 w-4'} />
+            </button>
           </Marker>
         );
       })}

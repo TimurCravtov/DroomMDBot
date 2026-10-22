@@ -2,15 +2,23 @@ import { useState } from 'react';
 import { ArrivalsPanel } from './components/ArrivalsPanel';
 import { CompassButton, LocateButton, ZoomButtons } from './components/MapControls';
 import { RoutePicker } from './components/RoutePicker';
-import { SearchBar } from './components/SearchBar';
+import { PickLocation, type PickedLocation } from './components/PickLocation';
+import { PlaceCard } from './components/PlaceCard';
+import { SearchBar, type SearchShortcut } from './components/SearchBar';
 import { SelectedRoutes } from './components/SelectedRoutes';
 import { SettingsMenu } from './components/SettingsMenu';
 import { StyleSwitcher } from './components/StyleSwitcher';
 import { TransitMap } from './components/TransitMap';
 import { useTheme } from './hooks/useTheme';
-import { useArrivals, useRoutes, useStops, useVehicles } from './hooks/useTransport';
+import {
+  useArrivals,
+  useRoutes,
+  useSavedPlaces,
+  useStops,
+  useVehicles,
+} from './hooks/useTransport';
 import { loadMapStyleId, saveMapStyleId, type MapStyleId } from './map/mapStyles';
-import type { Route } from './api';
+import type { Place, PlaceKind, Route, Stop } from './api';
 import type { UserLocation } from './map/types';
 
 export function App() {
@@ -18,6 +26,10 @@ export function App() {
   const { data: stops = [] } = useStops();
   const [routeIds, setRouteIds] = useState<string[]>([]);
   const [stopId, setStopId] = useState<string | null>(null);
+  const { places, save: savePlace, remove: removePlace } = useSavedPlaces();
+  const [focusedPlace, setFocusedPlace] = useState<Place | null>(null);
+  // Set while the user is choosing a point on the map; says what the point is for.
+  const [pickPurpose, setPickPurpose] = useState<PlaceKind | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const { preference: theme, setPreference: setTheme } = useTheme();
@@ -36,10 +48,45 @@ export function App() {
     .map((id) => routes.find((r) => r.id === id))
     .filter((r): r is Route => !!r);
 
-  // While the search bar is expanded, everything else fades out of the way.
-  const hideWhenSearching = `transition-opacity duration-300 ${
-    searchOpen ? 'pointer-events-none opacity-0' : ''
-  }`;
+  const picking = pickPurpose !== null;
+
+  // Stops and places are mutually exclusive selections: only one card at a time.
+  const selectStop = (id: string | null) => {
+    setStopId(id);
+    if (id) setFocusedPlace(null);
+  };
+  const focusPlace = (place: Place) => {
+    setStopId(null);
+    setFocusedPlace(place);
+  };
+
+  const handleShortcut = (shortcut: SearchShortcut) =>
+    setPickPurpose(shortcut === 'add' ? 'custom' : shortcut === 'map' ? 'pin' : shortcut);
+
+  const confirmPick = async (picked: PickedLocation) => {
+    const purpose = pickPurpose;
+    setPickPurpose(null);
+    if (!purpose) return;
+    const { lat, lng } = picked;
+    if (purpose === 'pin') {
+      focusPlace({ id: 'pin', kind: 'pin', label: 'Dropped pin', lat, lng });
+      return;
+    }
+    const label =
+      purpose === 'home' ? 'Home' : purpose === 'work' ? 'Work' : picked.name.trim() || picked.description;
+    focusPlace(await savePlace({ kind: purpose, label, lat, lng }));
+  };
+
+  const showStopArrivals = (stop: Stop) => selectStop(stop.id);
+
+  // Markers for saved places, plus the temporary dropped pin.
+  const mapPlaces = focusedPlace?.kind === 'pin' ? [...places, focusedPlace] : places;
+
+  // While the search bar is expanded or a map point is being picked, the rest fades away.
+  const fade = (hide: boolean) =>
+    `transition-opacity duration-300 ${hide ? 'pointer-events-none opacity-0' : ''}`;
+  const hideWhenSearching = fade(searchOpen || picking);
+  const hideOnlyWhenSearching = fade(searchOpen);
 
   return (
     <div className="relative h-screen w-screen overflow-hidden">
@@ -52,11 +99,14 @@ export function App() {
           selectedRoutes={selectedRoutes}
           userLocation={userLocation}
           mapStyleId={mapStyleId}
-          onSelectStop={setStopId}
+          places={mapPlaces}
+          focusedPlace={focusedPlace}
+          onSelectStop={selectStop}
+          onSelectPlace={focusPlace}
         />
       </div>
 
-      <div className={`absolute bottom-10 right-3 z-10 flex items-center gap-2 ${hideWhenSearching}`}>
+      <div className={`absolute bottom-10 right-3 z-10 flex items-center gap-2 ${hideOnlyWhenSearching}`}>
         <ZoomButtons />
         <LocateButton onLocated={setUserLocation} />
       </div>
@@ -77,7 +127,11 @@ export function App() {
       <SearchBar
         expanded={searchOpen}
         onExpandedChange={setSearchOpen}
-        onSelectStop={setStopId}
+        hidden={picking}
+        places={places}
+        onSelectStop={selectStop}
+        onSelectPlace={focusPlace}
+        onShortcut={handleShortcut}
         onSelectRoute={(id) => setRouteIds([id])}
       />
 
@@ -106,6 +160,34 @@ export function App() {
             onClose={() => setStopId(null)}
           />
         </div>
+      )}
+
+      {focusedPlace && (
+        <div
+          className={`absolute bottom-[5.5rem] left-4 right-4 z-10 sm:right-auto sm:w-80 ${hideWhenSearching}`}
+        >
+          <PlaceCard
+            place={focusedPlace}
+            onClose={() => setFocusedPlace(null)}
+            onRemove={
+              focusedPlace.kind === 'pin'
+                ? undefined
+                : () => {
+                    void removePlace(focusedPlace.id);
+                    setFocusedPlace(null);
+                  }
+            }
+            onShowStop={showStopArrivals}
+          />
+        </div>
+      )}
+
+      {pickPurpose && (
+        <PickLocation
+          purpose={pickPurpose}
+          onConfirm={(picked) => void confirmPick(picked)}
+          onCancel={() => setPickPurpose(null)}
+        />
       )}
     </div>
   );

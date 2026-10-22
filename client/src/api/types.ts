@@ -41,9 +41,30 @@ export interface StopSearchResult extends Stop {
   routeNumbers: string[];
 }
 
+/** home / work / custom are saved by the user; pin is a temporary dropped pin. */
+export type PlaceKind = 'home' | 'work' | 'custom' | 'pin';
+
+export interface Place {
+  id: string;
+  kind: PlaceKind;
+  label: string;
+  lat: number;
+  lng: number;
+}
+
+export type NewPlace = Omit<Place, 'id'>;
+
+export interface LocationInfo {
+  /** Human-readable description of the point, e.g. "Near Piața Centrală". */
+  label: string;
+  nearestStop: Stop | null;
+  distanceMeters: number;
+}
+
 export interface SearchResults {
   routes: Route[];
   stops: StopSearchResult[];
+  places: Place[];
 }
 
 export type Unsubscribe = () => void;

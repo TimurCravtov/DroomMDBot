@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useTransportClient } from '../api/context';
-import type { Arrival, Route, SearchResults, Stop, Vehicle } from '../api';
+import type {
+  Arrival,
+  LocationInfo,
+  NewPlace,
+  Place,
+  Route,
+  SearchResults,
+  Stop,
+  Vehicle,
+} from '../api';
 
 interface Fetched<T> {
   data: T | undefined;
@@ -106,4 +115,59 @@ export function useSearch(
   }, [client, query, debounceMs]);
 
   return { data, loading };
+}
+
+/** The user's saved places (home, work, custom) with save / remove helpers. */
+export function useSavedPlaces() {
+  const client = useTransportClient();
+  const [places, setPlaces] = useState<Place[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void client.getSavedPlaces().then((p) => !cancelled && setPlaces(p));
+    return () => {
+      cancelled = true;
+    };
+  }, [client]);
+
+  const save = async (input: NewPlace) => {
+    const place = await client.savePlace(input);
+    setPlaces(await client.getSavedPlaces());
+    return place;
+  };
+
+  const remove = async (placeId: string) => {
+    await client.deletePlace(placeId);
+    setPlaces(await client.getSavedPlaces());
+  };
+
+  return { places, save, remove };
+}
+
+/** Describes a map point (debounced); undefined while loading or when `point` is null. */
+export function useLocationInfo(
+  point: { lat: number; lng: number } | null,
+  debounceMs = 200,
+): LocationInfo | undefined {
+  const client = useTransportClient();
+  const [info, setInfo] = useState<LocationInfo>();
+  const lat = point?.lat;
+  const lng = point?.lng;
+
+  useEffect(() => {
+    if (lat === undefined || lng === undefined) {
+      setInfo(undefined);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      void client.describeLocation(lat, lng).then((r) => !cancelled && setInfo(r));
+    }, debounceMs);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [client, lat, lng, debounceMs]);
+
+  return info;
 }

@@ -1,6 +1,9 @@
 import type { TransportClient } from '../client';
 import type {
   Arrival,
+  LocationInfo,
+  NewPlace,
+  Place,
   Route,
   SearchResults,
   Stop,
@@ -9,6 +12,7 @@ import type {
   Vehicle,
 } from '../types';
 import { MOCK_ROUTES, MOCK_STOPS } from './data';
+import { distanceMeters } from './geo';
 import { buildLoop, positionAt, type Loop } from './loop';
 
 const SPEED_MS: Record<TransportType, number> = {
@@ -39,6 +43,16 @@ function routeMatches(route: Route, q: string): boolean {
   );
 }
 
+const PLACES_KEY = 'mock.places';
+
+function loadPlaces(): Place[] {
+  try {
+    return JSON.parse(localStorage.getItem(PLACES_KEY) ?? '[]') as Place[];
+  } catch {
+    return [];
+  }
+}
+
 interface SimVehicle {
   id: string;
   route: Route;
@@ -64,6 +78,7 @@ export class MockEasyWayClient implements TransportClient {
   private readonly tickMs: number;
   private readonly epoch = Date.now();
   private readonly fleet: SimVehicle[];
+  private places: Place[] = loadPlaces();
 
   constructor({ latencyMs = 150, tickMs = 1000 }: MockOptions = {}) {
     this.latencyMs = latencyMs;
@@ -109,13 +124,52 @@ export class MockEasyWayClient implements TransportClient {
 
   search(query: string): Promise<SearchResults> {
     const q = normalize(query.trim());
-    if (!q) return this.respond({ routes: [], stops: [] });
+    if (!q) return this.respond({ routes: [], stops: [], places: [] });
     return this.respond({
+      places: this.places.filter((p) => normalize(p.label).includes(q)),
       routes: MOCK_ROUTES.filter((r) => routeMatches(r, q)),
       stops: MOCK_STOPS.filter((s) => normalize(s.name).includes(q)).map((s) => ({
         ...s,
         routeNumbers: MOCK_ROUTES.filter((r) => r.stopIds.includes(s.id)).map((r) => r.number),
       })),
+    });
+  }
+
+  getSavedPlaces(): Promise<Place[]> {
+    return this.respond([...this.places]);
+  }
+
+  savePlace(input: NewPlace): Promise<Place> {
+    const unique = input.kind === 'home' || input.kind === 'work';
+    const place: Place = {
+      ...input,
+      id: `p-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+    };
+    this.places = [...this.places.filter((p) => !unique || p.kind !== input.kind), place];
+    this.persistPlaces();
+    return this.respond(place);
+  }
+
+  deletePlace(placeId: string): Promise<void> {
+    this.places = this.places.filter((p) => p.id !== placeId);
+    this.persistPlaces();
+    return this.respond(undefined);
+  }
+
+  describeLocation(lat: number, lng: number): Promise<LocationInfo> {
+    let nearestStop: Stop | null = null;
+    let best = Infinity;
+    for (const stop of MOCK_STOPS) {
+      const d = distanceMeters({ lat, lng }, stop);
+      if (d < best) {
+        best = d;
+        nearestStop = stop;
+      }
+    }
+    return this.respond({
+      label: nearestStop ? `Near ${nearestStop.name}` : 'Chișinău',
+      nearestStop,
+      distanceMeters: Math.round(best),
     });
   }
 
@@ -145,6 +199,14 @@ export class MockEasyWayClient implements TransportClient {
           updatedAt: now,
         };
       });
+  }
+
+  private persistPlaces() {
+    try {
+      localStorage.setItem(PLACES_KEY, JSON.stringify(this.places));
+    } catch {
+      // storage unavailable; places live in memory only
+    }
   }
 
   private distanceAt(v: SimVehicle, now: number): number {

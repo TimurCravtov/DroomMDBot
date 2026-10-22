@@ -1,16 +1,25 @@
-import { useRef, useState, type ReactNode } from 'react';
-import { TbArrowLeft, TbMapPin, TbSearch, TbX } from 'react-icons/tb';
-import type { Route, StopSearchResult, TransportType } from '../api';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { TbArrowLeft, TbMap2, TbMapPin, TbPlus, TbSearch, TbX } from 'react-icons/tb';
+import type { Place, Route, StopSearchResult, TransportType } from '../api';
 import { useSearch } from '../hooks/useTransport';
+import { PlaceIcon } from './PlaceIcon';
 import { TypeBadge, TYPE_LABEL } from './TypeBadge';
 import { TypeFilter } from './TypeFilter';
 import { closeButton, hoverRow, mutedText, surface } from './ui';
 
+export type SearchShortcut = 'home' | 'work' | 'add' | 'map';
+
 interface Props {
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
+  /** Fades the whole bar out, e.g. while picking a location on the map. */
+  hidden: boolean;
+  /** Saved places, shown as quick chips under the empty search field. */
+  places: Place[];
   onSelectStop: (stopId: string) => void;
   onSelectRoute: (routeId: string) => void;
+  onSelectPlace: (place: Place) => void;
+  onShortcut: (shortcut: SearchShortcut) => void;
 }
 
 // Collapsed, the bar leaves room for the settings button on the left and the
@@ -29,14 +38,48 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
+function Chip({
+  icon,
+  label,
+  hint,
+  onClick,
+}: {
+  icon: ReactNode;
+  label: string;
+  hint?: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className={`flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-sm shadow-lg ${surface} ${hoverRow}`}
+      onClick={onClick}
+    >
+      {icon}
+      <span className="font-medium">{label}</span>
+      {hint && <span className={`text-xs ${mutedText}`}>{hint}</span>}
+    </button>
+  );
+}
+
 /**
- * Search field that grows to the full width when focused. Once there is a query,
- * the results take over the whole screen (the bar stays on top of them).
+ * Search field that grows to the full width when focused. While empty it offers
+ * shortcuts (home, work, add a place, select on map); once there is a query, the
+ * results take over the whole screen and the bar stays on top of them.
  */
-export function SearchBar({ expanded, onExpandedChange, onSelectStop, onSelectRoute }: Props) {
+export function SearchBar({
+  expanded,
+  onExpandedChange,
+  hidden,
+  places,
+  onSelectStop,
+  onSelectRoute,
+  onSelectPlace,
+  onShortcut,
+}: Props) {
   const [query, setQuery] = useState('');
   const [type, setType] = useState<TransportType | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
   const { data, loading } = useSearch(query);
 
   const hasQuery = query.trim() !== '';
@@ -45,6 +88,11 @@ export function SearchBar({ expanded, onExpandedChange, onSelectStop, onSelectRo
   const routes = allRoutes.filter((r) => type === null || r.type === type);
   const typesFound = new Set(allRoutes.map((r) => r.type));
   const stops: StopSearchResult[] = data?.stops ?? [];
+  const foundPlaces: Place[] = data?.places ?? [];
+
+  const home = places.find((p) => p.kind === 'home');
+  const work = places.find((p) => p.kind === 'work');
+  const customPlaces = places.filter((p) => p.kind === 'custom');
 
   const close = () => {
     setQuery('');
@@ -58,10 +106,25 @@ export function SearchBar({ expanded, onExpandedChange, onSelectStop, onSelectRo
     close();
   };
 
+  // With nothing typed there is nothing to keep open: a click outside collapses the bar.
+  useEffect(() => {
+    if (!expanded || hasQuery) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (!barRef.current?.contains(e.target as Node)) close();
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+    // `close` only uses stable setters and refs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expanded, hasQuery]);
+
   return (
     <>
       <div
-        className="absolute top-4 z-[1000] transition-[left,right] duration-500 ease-in-out"
+        ref={barRef}
+        className={`absolute top-4 z-[1000] transition-[left,right,opacity] duration-500 ease-in-out ${
+          hidden ? 'pointer-events-none opacity-0' : ''
+        }`}
         style={{
           left: expanded ? '1rem' : COLLAPSED_LEFT,
           right: expanded ? '1rem' : COLLAPSED_RIGHT,
@@ -85,7 +148,7 @@ export function SearchBar({ expanded, onExpandedChange, onSelectStop, onSelectRo
           <input
             ref={inputRef}
             value={query}
-            placeholder="Search stops or routes"
+            placeholder="Search stops, routes or places"
             className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-ink-400"
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => onExpandedChange(true)}
@@ -94,6 +157,7 @@ export function SearchBar({ expanded, onExpandedChange, onSelectStop, onSelectRo
               if (e.key === 'Enter') {
                 if (routes[0]) pick(() => onSelectRoute(routes[0].id));
                 else if (stops[0]) pick(() => onSelectStop(stops[0].id));
+                else if (foundPlaces[0]) pick(() => onSelectPlace(foundPlaces[0]));
               }
             }}
           />
@@ -111,6 +175,41 @@ export function SearchBar({ expanded, onExpandedChange, onSelectStop, onSelectRo
             </button>
           )}
         </label>
+
+        {expanded && !hasQuery && (
+          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-3 pt-3 [scrollbar-width:none]">
+            <Chip
+              icon={<PlaceIcon kind="home" />}
+              label="Home"
+              hint={home ? undefined : 'Set'}
+              onClick={() => pick(() => (home ? onSelectPlace(home) : onShortcut('home')))}
+            />
+            <Chip
+              icon={<PlaceIcon kind="work" />}
+              label="Work"
+              hint={work ? undefined : 'Set'}
+              onClick={() => pick(() => (work ? onSelectPlace(work) : onShortcut('work')))}
+            />
+            {customPlaces.map((p) => (
+              <Chip
+                key={p.id}
+                icon={<PlaceIcon kind="custom" />}
+                label={p.label}
+                onClick={() => pick(() => onSelectPlace(p))}
+              />
+            ))}
+            <Chip
+              icon={<TbPlus className="h-5 w-5" />}
+              label="Add a place"
+              onClick={() => pick(() => onShortcut('add'))}
+            />
+            <Chip
+              icon={<TbMap2 className="h-5 w-5" />}
+              label="Select on map"
+              onClick={() => pick(() => onShortcut('map'))}
+            />
+          </div>
+        )}
       </div>
 
       <div
@@ -122,7 +221,7 @@ export function SearchBar({ expanded, onExpandedChange, onSelectStop, onSelectRo
         <div className="mx-auto max-w-2xl px-4 pb-8">
           {!data && loading && <p className={`px-4 py-6 text-sm ${mutedText}`}>Searching…</p>}
 
-          {data && allRoutes.length + stops.length === 0 && (
+          {data && allRoutes.length + stops.length + foundPlaces.length === 0 && (
             <p className={`px-4 py-6 text-sm ${mutedText}`}>No results for “{query.trim()}”.</p>
           )}
 
@@ -140,6 +239,22 @@ export function SearchBar({ expanded, onExpandedChange, onSelectStop, onSelectRo
             <p className={`px-4 py-3 text-sm ${mutedText}`}>
               No {TYPE_LABEL[type].toLowerCase()} routes match “{query.trim()}”.
             </p>
+          )}
+
+          {foundPlaces.length > 0 && (
+            <Section title={`Places · ${foundPlaces.length}`}>
+              {foundPlaces.map((p) => (
+                <li key={p.id}>
+                  <button
+                    className={`flex w-full items-center gap-3 px-4 py-3 text-left ${hoverRow}`}
+                    onClick={() => pick(() => onSelectPlace(p))}
+                  >
+                    <PlaceIcon kind={p.kind} className="h-5 w-5 shrink-0 text-ink-400" />
+                    <span className="truncate text-sm font-medium">{p.label}</span>
+                  </button>
+                </li>
+              ))}
+            </Section>
           )}
 
           {routes.length > 0 && (
