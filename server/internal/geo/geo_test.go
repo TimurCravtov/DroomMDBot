@@ -60,3 +60,22 @@ func TestBearing(t *testing.T) {
 		}
 	}
 }
+
+func TestSliceCoversRequestedStretch(t *testing.T) {
+	line := eastLine()
+	from, to := 300.0, 800.0 // spans the vertex between the two segments
+	pts := line.Slice(from, to)
+	if len(pts) != 3 {
+		t.Fatalf("slice has %d points, want start, the inner vertex, end", len(pts))
+	}
+	sliced := NewPolyline(pts)
+	if math.Abs(sliced.Length()-(to-from)) > 2 {
+		t.Errorf("slice length = %.1f, want about %.1f", sliced.Length(), to-from)
+	}
+	if line.Slice(500, 500) != nil || line.Slice(600, 100) != nil {
+		t.Error("an empty or reversed range should give no points")
+	}
+	if got := line.Slice(-50, 1e9); got[0] != line.pts[0] || got[len(got)-1] != line.pts[2] {
+		t.Error("out-of-range bounds should clamp to the line's ends")
+	}
+}

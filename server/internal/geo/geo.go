@@ -2,7 +2,10 @@
 // bearings and measuring progress along a route's shape.
 package geo
 
-import "math"
+import (
+	"math"
+	"sort"
+)
 
 type Point struct{ Lat, Lng float64 }
 
@@ -78,4 +81,43 @@ func (l *Polyline) Project(p Point, fromSeg int) (offset, dist float64, seg int)
 		}
 	}
 	return offset, best, seg
+}
+
+// pointAt returns the point d meters along the line (clamped to its ends).
+func (l *Polyline) pointAt(d float64) Point {
+	n := len(l.pts)
+	switch {
+	case n == 0:
+		return Point{}
+	case d <= 0 || n == 1:
+		return l.pts[0]
+	case d >= l.cum[n-1]:
+		return l.pts[n-1]
+	}
+	i := sort.SearchFloat64s(l.cum, d) // first index with cum[i] >= d
+	if i == 0 {
+		return l.pts[0]
+	}
+	seg := l.cum[i] - l.cum[i-1]
+	if seg == 0 {
+		return l.pts[i]
+	}
+	t := (d - l.cum[i-1]) / seg
+	a, b := l.pts[i-1], l.pts[i]
+	return Point{Lat: a.Lat + (b.Lat-a.Lat)*t, Lng: a.Lng + (b.Lng-a.Lng)*t}
+}
+
+// Slice returns the part of the line between two distances (meters from its start),
+// including interpolated end points. It returns nil when to <= from.
+func (l *Polyline) Slice(from, to float64) []Point {
+	if len(l.pts) == 0 || to <= from {
+		return nil
+	}
+	out := []Point{l.pointAt(from)}
+	for i, p := range l.pts {
+		if l.cum[i] > from && l.cum[i] < to {
+			out = append(out, p)
+		}
+	}
+	return append(out, l.pointAt(to))
 }
