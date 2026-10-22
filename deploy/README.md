@@ -78,7 +78,7 @@ Outside Telegram there is no signed launch data, so the app uses an **anonymous 
 random token it keeps in the browser's localStorage, which the server treats as a user of its
 own. The server accepts this only when `AUTH_ALLOW_ANON=true`.
 
-- **Locally:** `AUTH_ALLOW_ANON=true` is already in your `.env`. Run `go run ./cmd/server` in
+- **Locally:** `AUTH_ALLOW_ANON=true` is already in `server/.env`. Run `go run ./cmd/server` in
   `server/` and `npm run dev` in `client/`, and saved places persist in `server/data/`.
 - **Against the VPS:** set `AUTH_ALLOW_ANON=true` on the server resource while testing, then
   turn it off. To point your local client at the deployed server, put
@@ -123,5 +123,5 @@ adding a "delete my data" button or bot command that calls it.
 
 ## Rotate the bot token
 
-The token in your local `.env` has been shared in a chat. Before launch, revoke and reissue
+The token in your local `server/.env` has been shared in a chat. Before launch, revoke and reissue
 it in @BotFather (**/revoke**) and put the new one into Coolify's environment variables.

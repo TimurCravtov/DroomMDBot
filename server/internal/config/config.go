@@ -33,10 +33,10 @@ type Config struct {
 	StaticRefresh time.Duration
 }
 
-// Load builds the configuration. Real environment variables win; .env files
-// (./.env, then ../.env) only fill in what is missing.
+// Load builds the configuration. Real environment variables win; a .env file in the
+// working directory (server/ when run from there) only fills in what is missing.
 func Load() (Config, error) {
-	loadDotEnv(".env", "../.env")
+	loadDotEnv(".env")
 
 	cfg := Config{
 		APIKey:      os.Getenv("TRANZY_API_KEY"),

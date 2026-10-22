@@ -1,5 +1,6 @@
 # Run the API server locally with Docker (production runs on Coolify: see deploy/README.md):
 #
+#   cd server
 #   cp .env.example .env        # fill in TRANZY_API_KEY and TELEGRAM_BOT_TOKEN
 #   docker compose up -d --build
 #
@@ -8,7 +9,7 @@
 
 services:
   server:
-    build: ./server
+    build: .
     restart: unless-stopped
     env_file: .env
     environment:

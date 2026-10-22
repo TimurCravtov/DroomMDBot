@@ -9,12 +9,12 @@ Tranzy sees one client no matter how many people watch the map.
 ## Run
 
 ```sh
-cp ../.env.example ../.env   # then put your key in TRANZY_API_KEY
+cp .env.example .env   # then put your key in TRANZY_API_KEY
 go run ./cmd/server
 ```
 
 Get a free key at <https://apps.tranzy.ai/accounts>. Settings come from the environment, or
-from `.env` in this directory or the repository root (real environment variables win).
+from `.env` in this directory (real environment variables win).
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
@@ -111,7 +111,7 @@ internal/geo/        distances, bearings, progress along a polyline
 ## Docker
 
 ```sh
-docker compose up -d --build     # from the repository root; data in the droommd-data volume
+docker compose up -d --build     # from this directory; data in the droommd-data volume
 ```
 
 The `Dockerfile` builds a static binary into a distroless image that runs as a non-root user
