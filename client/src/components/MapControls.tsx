@@ -3,19 +3,14 @@ import { useMap } from 'react-map-gl/maplibre';
 import type { UserLocation } from '../map/types';
 import { MAP_ID } from './TransitMap';
 import { hoverRow, roundButton, surface } from './ui';
+import { TbCompass, TbCurrentLocation, TbMinus, TbPlus } from 'react-icons/tb';
 
-interface Props {
-  onLocated: (location: UserLocation) => void;
-}
+// These must be rendered inside <MapProvider>.
 
-type LocateStatus = 'idle' | 'locating' | 'denied';
-
-
-/** Compass (reset to north), locate-me and zoom buttons. Must be inside <MapProvider>. */
-export function MapControls({ onLocated }: Props) {
+/** Compass whose needle follows the map's rotation; click to snap back to north. */
+export function CompassButton() {
   const map = useMap()[MAP_ID];
   const [bearing, setBearing] = useState(0);
-  const [status, setStatus] = useState<LocateStatus>('idle');
 
   useEffect(() => {
     if (!map) return;
@@ -26,6 +21,26 @@ export function MapControls({ onLocated }: Props) {
       map.off('rotate', sync);
     };
   }, [map]);
+
+  return (
+    <button
+      aria-label="Reset map to north"
+      title="Reset to north"
+      className={roundButton}
+      onClick={() => map?.easeTo({ bearing: 0 })}
+    >
+      {/* Tabler's needle points north-east, hence the extra 45°. */}
+      <TbCompass className="h-6 w-6" style={{ transform: `rotate(${-bearing - 45}deg)` }} />
+    </button>
+  );
+}
+
+type LocateStatus = 'idle' | 'locating' | 'denied';
+
+/** Centers the map on the user's current position. */
+export function LocateButton({ onLocated }: { onLocated: (location: UserLocation) => void }) {
+  const map = useMap()[MAP_ID];
+  const [status, setStatus] = useState<LocateStatus>('idle');
 
   const locate = () => {
     if (!map) return;
@@ -45,56 +60,38 @@ export function MapControls({ onLocated }: Props) {
   };
 
   return (
-    <div className="flex flex-col items-center gap-2">
-      <button
-        aria-label="Reset map to north"
-        title="Reset to north"
-        className={roundButton}
-        onClick={() => map?.easeTo({ bearing: 0 })}
-      >
-        <svg
-          viewBox="0 0 24 24"
-          className="h-6 w-6"
-          style={{ transform: `rotate(${-bearing}deg)` }}
-        >
-          <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="1.5" />
-          <path d="M12 4.5l3 7.5h-6z" fill="#dc2626" />
-          <path d="M12 19.5l-3-7.5h6z" fill="currentColor" />
-        </svg>
-      </button>
+    <button
+      aria-label="Show my location"
+      title={
+        status === 'denied' ? 'Location unavailable — check browser permissions' : 'Show my location'
+      }
+      className={`${roundButton} ${status === 'denied' ? '!text-red-500' : ''} ${
+        status === 'locating' ? 'animate-pulse' : ''
+      }`}
+      onClick={locate}
+    >
+      <TbCurrentLocation className="h-6 w-6" />
+    </button>
+  );
+}
 
-      <button
-        aria-label="Show my location"
-        title={
-          status === 'denied' ? 'Location unavailable — check browser permissions' : 'Show my location'
-        }
-        className={`${roundButton} ${status === 'denied' ? '!text-red-500' : ''} ${
-          status === 'locating' ? 'animate-pulse' : ''
-        }`}
-        onClick={locate}
-      >
-        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8">
-          <circle cx="12" cy="12" r="4" />
-          <path d="M12 2v3M12 19v3M2 12h3M19 12h3" strokeLinecap="round" />
-        </svg>
-      </button>
+/** Horizontal − / + pill. */
+export function ZoomButtons() {
+  const map = useMap()[MAP_ID];
+  const half = `flex h-10 w-10 items-center justify-center text-xl ${hoverRow}`;
 
-      <div className={`flex flex-col overflow-hidden rounded-full shadow-lg ${surface}`}>
-        <button
-          aria-label="Zoom in"
-          className={`flex h-10 w-10 items-center justify-center text-xl ${hoverRow}`}
-          onClick={() => map?.zoomIn()}
-        >
-          +
-        </button>
-        <button
-          aria-label="Zoom out"
-          className={`flex h-10 w-10 items-center justify-center border-t border-ink-200 text-xl dark:border-ink-700 ${hoverRow}`}
-          onClick={() => map?.zoomOut()}
-        >
-          −
-        </button>
-      </div>
+  return (
+    <div className={`flex overflow-hidden rounded-full shadow-lg ${surface}`}>
+      <button aria-label="Zoom out" className={half} onClick={() => map?.zoomOut()}>
+        <TbMinus className="h-5 w-5" />
+      </button>
+      <button
+        aria-label="Zoom in"
+        className={`${half} border-l border-ink-200 dark:border-ink-700`}
+        onClick={() => map?.zoomIn()}
+      >
+        <TbPlus className="h-5 w-5" />
+      </button>
     </div>
   );
 }

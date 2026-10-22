@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { MAP_STYLES, type MapStyleId } from '../map/mapStyles';
 import { hoverRow, roundButton, surface } from './ui';
+import { TbCheck, TbStack2 } from 'react-icons/tb';
 
 interface Props {
   value: MapStyleId;
@@ -20,15 +21,11 @@ export function StyleSwitcher({ value, onChange }: Props) {
         className={roundButton}
         onClick={() => setOpen((o) => !o)}
       >
-        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
-          <path d="M12 3l9 5-9 5-9-5z" />
-          <path d="M3 12.5l9 5 9-5" strokeLinecap="round" />
-          <path d="M3 16.5l9 5 9-5" strokeLinecap="round" />
-        </svg>
+        <TbStack2 className="h-6 w-6" />
       </button>
 
       {open && (
-        <ul className={`absolute bottom-0 right-12 w-36 rounded-2xl py-1.5 shadow-lg ${surface}`}>
+        <ul className={`absolute right-0 top-12 w-36 rounded-2xl py-1.5 shadow-lg ${surface}`}>
           {MAP_STYLES.map((s) => (
             <li key={s.id}>
               <button
@@ -41,7 +38,7 @@ export function StyleSwitcher({ value, onChange }: Props) {
                 }}
               >
                 {s.label}
-                {s.id === value && <span aria-hidden>✓</span>}
+                {s.id === value && <TbCheck aria-hidden className="h-4 w-4" />}
               </button>
             </li>
           ))}

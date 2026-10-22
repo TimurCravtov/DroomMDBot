@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import type { Route, Stop } from '../api';
 import { TYPE_BADGE } from './typeStyles';
 import { hoverRow, mutedText, surface } from './ui';
+import { TbMapPin, TbSearch } from 'react-icons/tb';
 
 interface Props {
   stops: Stop[];
@@ -38,13 +39,7 @@ export function SearchBar({ stops, routes, onSelectStop, onSelectRoute }: Props)
   return (
     <div className="relative">
       <div className={`flex items-center gap-2 rounded-full px-4 py-2.5 shadow-lg focus-within:ring-2 focus-within:ring-ink-400 ${surface}`}>
-        <svg viewBox="0 0 20 20" className="h-5 w-5 shrink-0 text-ink-400" fill="currentColor">
-          <path
-            fillRule="evenodd"
-            d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.48l4.31 4.3a1 1 0 01-1.4 1.42l-4.32-4.31A6 6 0 012 8z"
-            clipRule="evenodd"
-          />
-        </svg>
+        <TbSearch className="h-5 w-5 shrink-0 text-ink-400" />
         <input
           type="search"
           value={query}
@@ -92,7 +87,9 @@ export function SearchBar({ stops, routes, onSelectStop, onSelectRoute }: Props)
                   pick(() => onSelectStop(s.id));
                 }}
               >
-                <span className="w-8 text-center text-ink-400">●</span>
+                <span className="flex w-8 justify-center text-ink-400">
+                  <TbMapPin className="h-5 w-5" />
+                </span>
                 <span className="truncate">{s.name}</span>
               </button>
             </li>

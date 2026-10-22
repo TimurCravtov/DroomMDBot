@@ -1,6 +1,7 @@
 import type { Arrival, Stop } from '../api';
 import { TYPE_BADGE } from './typeStyles';
 import { closeButton, mutedText, surface } from './ui';
+import { TbX } from 'react-icons/tb';
 
 interface Props {
   stop: Stop;
@@ -22,7 +23,7 @@ export function ArrivalsPanel({ stop, arrivals, error, onClose }: Props) {
           className={`ml-auto ${closeButton}`}
           onClick={onClose}
         >
-          ×
+          <TbX className="h-5 w-5" />
         </button>
       </div>
 
