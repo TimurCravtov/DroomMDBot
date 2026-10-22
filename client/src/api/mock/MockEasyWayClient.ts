@@ -18,8 +18,26 @@ const SPEED_MS: Record<TransportType, number> = {
 };
 const VEHICLES_PER_ROUTE = 3;
 
+/** Words (EN/RO) that select a vehicle type, matched by prefix: "bus", "auto", "troleib"... */
+const TYPE_ALIASES: Record<TransportType, string[]> = {
+  trolleybus: ['trolleybus', 'troleibuz'],
+  bus: ['bus', 'autobuz'],
+  minibus: ['minibus', 'microbuz', 'rutiera'],
+};
+
 /** Lowercase and strip diacritics so "piata" matches "Piața". */
 const normalize = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+
+/** Every word of the query must hit the route's number, name or vehicle type. */
+function routeMatches(route: Route, q: string): boolean {
+  const name = normalize(route.name);
+  return q.split(/\s+/).every(
+    (word) =>
+      route.number.startsWith(word) ||
+      name.includes(word) ||
+      TYPE_ALIASES[route.type].some((alias) => alias.startsWith(word)),
+  );
+}
 
 interface SimVehicle {
   id: string;
@@ -93,7 +111,7 @@ export class MockEasyWayClient implements TransportClient {
     const q = normalize(query.trim());
     if (!q) return this.respond({ routes: [], stops: [] });
     return this.respond({
-      routes: MOCK_ROUTES.filter((r) => normalize(`${r.number} ${r.name}`).includes(q)),
+      routes: MOCK_ROUTES.filter((r) => routeMatches(r, q)),
       stops: MOCK_STOPS.filter((s) => normalize(s.name).includes(q)).map((s) => ({
         ...s,
         routeNumbers: MOCK_ROUTES.filter((r) => r.stopIds.includes(s.id)).map((r) => r.number),

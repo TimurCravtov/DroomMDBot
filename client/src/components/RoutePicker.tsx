@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { TbCheck, TbRoute } from 'react-icons/tb';
 import type { Route, TransportType } from '../api';
-import { TypeBadge, TypeIcon, TYPE_LABEL } from './TypeBadge';
+import { TypeBadge } from './TypeBadge';
+import { TypeFilter } from './TypeFilter';
 import { hoverRow, mutedText, roundButton, surface } from './ui';
 
 interface Props {
@@ -10,8 +11,6 @@ interface Props {
   /** null shows vehicles from every route again. */
   onSelect: (routeId: string | null) => void;
 }
-
-const TYPES: TransportType[] = ['trolleybus', 'bus', 'minibus'];
 
 /** Button that opens a list of routes, filterable by vehicle type. */
 export function RoutePicker({ routes, selectedRouteId, onSelect }: Props) {
@@ -40,23 +39,11 @@ export function RoutePicker({ routes, selectedRouteId, onSelect }: Props) {
         <div
           className={`absolute bottom-12 left-0 flex h-[min(28rem,60vh)] w-72 flex-col overflow-hidden rounded-2xl shadow-lg ${surface}`}
         >
-          <div className="flex gap-1.5 border-b border-ink-200 p-2 dark:border-ink-700">
-            {[null, ...TYPES].map((t) => (
-              <button
-                key={t ?? 'all'}
-                aria-pressed={t === type}
-                title={t ? TYPE_LABEL[t] : 'All types'}
-                onClick={() => setType(t)}
-                className={`flex flex-1 items-center justify-center gap-1 rounded-full py-1.5 text-sm ${
-                  t === type
-                    ? 'bg-ink-900 font-semibold text-white dark:bg-white dark:text-ink-900'
-                    : `${mutedText} ${hoverRow}`
-                }`}
-              >
-                {t ? <TypeIcon type={t} className="h-5 w-5" /> : 'All'}
-              </button>
-            ))}
-          </div>
+          <TypeFilter
+            value={type}
+            onChange={setType}
+            className="border-b border-ink-200 p-2 dark:border-ink-700"
+          />
 
           <ul className="min-h-0 flex-1 overflow-y-auto py-1">
             <li>

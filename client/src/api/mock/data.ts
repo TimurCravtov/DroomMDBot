@@ -72,4 +72,19 @@ export const MOCK_ROUTES: Route[] = [
     name: 'Circul – Gara',
     stopIds: ['s8', 's5', 's3', 's2', 's1'],
   },
+  // Same numbers as routes above, on a different vehicle type.
+  {
+    id: 'b22',
+    number: '22',
+    type: 'bus',
+    name: 'Gara – Valea Morilor',
+    stopIds: ['s1', 's9', 's7'],
+  },
+  {
+    id: 'tb30',
+    number: '30',
+    type: 'trolleybus',
+    name: 'Autogara – Sala cu Orgă',
+    stopIds: ['s9', 's3', 's5'],
+  },
 ];

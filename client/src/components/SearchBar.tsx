@@ -1,8 +1,9 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { TbArrowLeft, TbMapPin, TbSearch, TbX } from 'react-icons/tb';
-import type { Route, StopSearchResult } from '../api';
+import type { Route, StopSearchResult, TransportType } from '../api';
 import { useSearch } from '../hooks/useTransport';
-import { TypeBadge } from './TypeBadge';
+import { TypeBadge, TYPE_LABEL } from './TypeBadge';
+import { TypeFilter } from './TypeFilter';
 import { closeButton, hoverRow, mutedText, surface } from './ui';
 
 interface Props {
@@ -34,16 +35,20 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
  */
 export function SearchBar({ expanded, onExpandedChange, onSelectStop, onSelectRoute }: Props) {
   const [query, setQuery] = useState('');
+  const [type, setType] = useState<TransportType | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { data, loading } = useSearch(query);
 
   const hasQuery = query.trim() !== '';
   const showResults = expanded && hasQuery;
-  const routes: Route[] = data?.routes ?? [];
+  const allRoutes: Route[] = data?.routes ?? [];
+  const routes = allRoutes.filter((r) => type === null || r.type === type);
+  const typesFound = new Set(allRoutes.map((r) => r.type));
   const stops: StopSearchResult[] = data?.stops ?? [];
 
   const close = () => {
     setQuery('');
+    setType(null);
     inputRef.current?.blur();
     onExpandedChange(false);
   };
@@ -117,8 +122,24 @@ export function SearchBar({ expanded, onExpandedChange, onSelectStop, onSelectRo
         <div className="mx-auto max-w-2xl px-4 pb-8">
           {!data && loading && <p className={`px-4 py-6 text-sm ${mutedText}`}>Searching…</p>}
 
-          {data && routes.length + stops.length === 0 && (
+          {data && allRoutes.length + stops.length === 0 && (
             <p className={`px-4 py-6 text-sm ${mutedText}`}>No results for “{query.trim()}”.</p>
+          )}
+
+          {allRoutes.length > 0 && (
+            <TypeFilter
+              value={type}
+              onChange={setType}
+              available={typesFound}
+              showLabels
+              className="px-0 pt-3"
+            />
+          )}
+
+          {allRoutes.length > 0 && routes.length === 0 && type && (
+            <p className={`px-4 py-3 text-sm ${mutedText}`}>
+              No {TYPE_LABEL[type].toLowerCase()} routes match “{query.trim()}”.
+            </p>
           )}
 
           {routes.length > 0 && (
