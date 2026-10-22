@@ -38,7 +38,7 @@ export function RoutePicker({ routes, selectedRouteId, onSelect }: Props) {
 
       {open && (
         <div
-          className={`absolute bottom-12 left-0 flex max-h-[60vh] w-72 flex-col overflow-hidden rounded-2xl shadow-lg ${surface}`}
+          className={`absolute bottom-12 left-0 flex h-[min(28rem,60vh)] w-72 flex-col overflow-hidden rounded-2xl shadow-lg ${surface}`}
         >
           <div className="flex gap-1.5 border-b border-ink-200 p-2 dark:border-ink-700">
             {[null, ...TYPES].map((t) => (
@@ -58,7 +58,7 @@ export function RoutePicker({ routes, selectedRouteId, onSelect }: Props) {
             ))}
           </div>
 
-          <ul className="overflow-y-auto py-1">
+          <ul className="min-h-0 flex-1 overflow-y-auto py-1">
             <li>
               <button
                 className={`flex w-full items-center justify-between px-4 py-2.5 text-left text-sm ${hoverRow}`}
