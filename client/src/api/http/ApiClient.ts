@@ -1,8 +1,9 @@
 import type { TransportClient } from '../client';
-import { distanceMeters } from '../geo';
+import { distanceMeters, type LatLng } from '../geo';
 import type {
   Arrival,
   GeocodeResult,
+  Itinerary,
   LngLat,
   LocationInfo,
   NewPlace,
@@ -101,6 +102,10 @@ export class ApiClient implements TransportClient {
 
   deletePlace(placeId: string): Promise<void> {
     return this.local.deletePlace(placeId);
+  }
+
+  planTrip(from: LatLng, to: LatLng): Promise<Itinerary[]> {
+    return this.json<Itinerary[]>(`/plan?from=${from.lat},${from.lng}&to=${to.lat},${to.lng}`);
   }
 
   async geocode(query: string): Promise<GeocodeResult[]> {

@@ -9,10 +9,11 @@ import {
   useMap,
   type MapLayerMouseEvent,
 } from 'react-map-gl/maplibre';
-import type { Place, Route, Stop, TransportType, Vehicle } from '../api';
+import type { Itinerary, Place, Route, Stop, TransportType, Vehicle } from '../api';
 import { MAP_STYLES, type MapStyleId } from '../map/mapStyles';
 import { readableTextColor } from '../map/routeColors';
 import type { UserLocation } from '../map/types';
+import { TbMapPinFilled } from 'react-icons/tb';
 import { PlaceIcon } from './PlaceIcon';
 import { useRouteColors } from './RouteColors';
 import { TypeIcon } from './TypeBadge';
@@ -46,6 +47,8 @@ interface Props {
   /** Saved places plus the dropped pin, if any. */
   places: Place[];
   focusedPlace: Place | null;
+  /** A planned journey to draw and frame, if any. */
+  itinerary: Itinerary | null;
   /** These routes are drawn (using `routePaths`) and framed. */
   selectedRoutes: Route[];
   /** Drawable paths per route id, as [lng, lat] lists; routes still loading are absent. */
@@ -64,9 +67,15 @@ function ViewController({
   focusedPlace,
   routePoints,
   routesKey,
+  itineraryPoints,
+  itineraryKey,
 }: {
   selectedStop: Stop | null;
   focusedPlace: Place | null;
+  /** Every point of the planned journey, used to frame it. */
+  itineraryPoints: LngLat[];
+  /** Changes when a different journey is shown. */
+  itineraryKey: string;
   /** Every point of every selected route, used to frame them all. */
   routePoints: LngLat[];
   /** Changes when the set of drawn routes changes. */
@@ -105,6 +114,27 @@ function ViewController({
     );
   }, [map, routesKey]);
 
+  useEffect(() => {
+    if (!map || itineraryPoints.length === 0) return;
+    const lngs = itineraryPoints.map(([lng]) => lng);
+    const lats = itineraryPoints.map(([, lat]) => lat);
+    // Leave room for the directions panel: beside it on wide screens, above on narrow ones.
+    const { clientWidth: w, clientHeight: h } = map.getContainer();
+    const wide = w >= 768;
+    map.fitBounds(
+      [
+        [Math.min(...lngs), Math.min(...lats)],
+        [Math.max(...lngs), Math.max(...lats)],
+      ],
+      {
+        padding: wide
+          ? { top: 60, bottom: 60, left: Math.min(470, w * 0.5), right: 60 }
+          : { top: Math.min(380, h * 0.55), bottom: 90, left: 40, right: 40 },
+        maxZoom: 17,
+      },
+    );
+  }, [map, itineraryKey]);
+
   return null;
 }
 
@@ -115,6 +145,7 @@ export function TransitMap({
   selectedStop,
   places,
   focusedPlace,
+  itinerary,
   selectedRoutes,
   routePaths,
   userLocation,
@@ -172,6 +203,11 @@ export function TransitMap({
   const routePoints = drawnRoutes.flatMap((r) => routePaths[r.id].flat());
   const routesKey = drawnRoutes.map((r) => r.id).join(',');
 
+  const itineraryPoints = itinerary?.legs.flatMap((l) => l.path) ?? [];
+  const itineraryKey = itinerary
+    ? `${itinerary.legs.map((l) => `${l.mode}${l.routeId ?? ''}${l.path.length}`).join('|')}@${itineraryPoints[0]?.join(',')}`
+    : '';
+
   // Vehicles inside the (slightly padded) viewport; only these get DOM markers.
   const inView = useMemo(() => {
     if (!bounds) return [];
@@ -225,6 +261,8 @@ export function TransitMap({
         focusedPlace={focusedPlace}
         routePoints={routePoints}
         routesKey={routesKey}
+        itineraryPoints={itineraryPoints}
+        itineraryKey={itineraryKey}
       />
 
       {drawnRoutes.map((route) => (
@@ -247,6 +285,40 @@ export function TransitMap({
               'line-width': 4,
               'line-opacity': 0.6,
             }}
+          />
+        </Source>
+      ))}
+
+      {/* The planned journey: dotted for walking, solid in the route's color for riding. */}
+      {itinerary?.legs.map((leg, i) => (
+        <Source
+          key={`leg-${i}`}
+          id={`leg-${i}`}
+          type="geojson"
+          data={{
+            type: 'Feature',
+            properties: {},
+            geometry: { type: 'LineString', coordinates: leg.path },
+          }}
+        >
+          <Layer
+            id={`leg-casing-${i}`}
+            type="line"
+            layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+            paint={{ 'line-color': '#ffffff', 'line-width': leg.mode === 'walk' ? 7 : 9, 'line-opacity': 0.9 }}
+          />
+          <Layer
+            id={`leg-line-${i}`}
+            type="line"
+            layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+            paint={
+              leg.mode === 'walk'
+                ? { 'line-color': '#2b2b2b', 'line-width': 4, 'line-dasharray': [0.1, 2] }
+                : {
+                    'line-color': routeColors[leg.routeId ?? ''] ?? TYPE_COLOR[leg.type ?? 'bus'],
+                    'line-width': 6,
+                  }
+            }
           />
         </Source>
       ))}
@@ -275,6 +347,34 @@ export function TransitMap({
           }}
         />
       </Source>
+
+      {itinerary && itinerary.legs.length > 0 && (
+        <>
+          <Marker
+            longitude={itinerary.legs[0].from.lng}
+            latitude={itinerary.legs[0].from.lat}
+            style={{ zIndex: 8 }}
+          >
+            <span className="block h-4 w-4 rounded-full border-[3px] border-white bg-ink-900 shadow-lg" />
+          </Marker>
+          <Marker
+            longitude={itinerary.legs[itinerary.legs.length - 1].to.lng}
+            latitude={itinerary.legs[itinerary.legs.length - 1].to.lat}
+            anchor="bottom"
+            style={{ zIndex: 8 }}
+          >
+            <TbMapPinFilled className="h-9 w-9 text-ink-900 drop-shadow-lg dark:text-white" />
+          </Marker>
+          {itinerary.legs
+            .filter((l) => l.mode === 'transit')
+            .flatMap((l) => [l.from, l.to])
+            .map((p, i) => (
+              <Marker key={`stop-${i}`} longitude={p.lng} latitude={p.lat} style={{ zIndex: 7 }}>
+                <span className="block h-3 w-3 rounded-full border-2 border-ink-900 bg-white" />
+              </Marker>
+            ))}
+        </>
+      )}
 
       {places.map((p) => {
         const focused = p.id === focusedPlace?.id;

@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { ArrivalsPanel } from './components/ArrivalsPanel';
 import { CompassButton, LocateButton, ZoomButtons } from './components/MapControls';
 import { RoutePicker } from './components/RoutePicker';
-import { PickLocation, type PickedLocation } from './components/PickLocation';
+import { DirectionsPanel } from './components/DirectionsPanel';
+import { PickLocation, type PickedLocation, type PickPurpose } from './components/PickLocation';
 import { PlaceCard } from './components/PlaceCard';
 import { SearchBar, type SearchShortcut } from './components/SearchBar';
 import { SelectedRoutes } from './components/SelectedRoutes';
@@ -20,8 +21,9 @@ import {
   useVehicles,
 } from './hooks/useTransport';
 import { loadMapStyleId, saveMapStyleId, type MapStyleId } from './map/mapStyles';
-import type { Place, PlaceKind, Route, Stop, Vehicle } from './api';
-import type { UserLocation } from './map/types';
+import type { Itinerary, Place, Route, Stop, Vehicle } from './api';
+import { getCurrentLocation } from './map/geolocation';
+import type { Endpoint, UserLocation } from './map/types';
 
 export function App() {
   const { data: routes = [] } = useRoutes();
@@ -31,7 +33,12 @@ export function App() {
   const { places, save: savePlace, remove: removePlace } = useSavedPlaces();
   const [focusedPlace, setFocusedPlace] = useState<Place | null>(null);
   // Set while the user is choosing a point on the map; says what the point is for.
-  const [pickPurpose, setPickPurpose] = useState<PlaceKind | null>(null);
+  const [pickPurpose, setPickPurpose] = useState<PickPurpose | null>(null);
+  // Journey planning: the two ends (null = the panel is closed) and the itinerary drawn.
+  const [directions, setDirections] = useState<{ from: Endpoint | null; to: Endpoint | null } | null>(
+    null,
+  );
+  const [plannedItinerary, setPlannedItinerary] = useState<Itinerary | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const { preference: theme, setPreference: setTheme } = useTheme();
@@ -52,6 +59,7 @@ export function App() {
     .filter((r): r is Route => !!r);
 
   const picking = pickPurpose !== null;
+  const directionsOpen = directions !== null;
 
   // Stops and places are mutually exclusive selections: only one card at a time.
   const selectStop = (id: string | null) => {
@@ -63,14 +71,49 @@ export function App() {
     setFocusedPlace(place);
   };
 
-  const handleShortcut = (shortcut: SearchShortcut) =>
-    setPickPurpose(shortcut === 'add' ? 'custom' : shortcut === 'map' ? 'pin' : shortcut);
+  /** The device's position as a journey end; also shows it on the map. */
+  const myLocationEndpoint = async (): Promise<Endpoint> => {
+    const location = await getCurrentLocation();
+    setUserLocation(location);
+    return { label: 'My location', lat: location.lat, lng: location.lng, kind: 'me' };
+  };
+
+  const openDirections = (ends: { from?: Endpoint; to?: Endpoint }) => {
+    setDirections({ from: ends.from ?? null, to: ends.to ?? null });
+    if (!ends.from) {
+      // Start from where the user is, when that can be found; otherwise they choose.
+      myLocationEndpoint().then(
+        (me) => setDirections((d) => (d && !d.from ? { ...d, from: me } : d)),
+        () => {},
+      );
+    }
+  };
+
+  const closeDirections = () => {
+    setDirections(null);
+    setPlannedItinerary(null);
+  };
+
+  const handleShortcut = (shortcut: SearchShortcut) => {
+    if (shortcut === 'directions') openDirections({});
+    else setPickPurpose(shortcut === 'add' ? 'custom' : shortcut === 'map' ? 'pin' : shortcut);
+  };
 
   const confirmPick = async (picked: PickedLocation) => {
     const purpose = pickPurpose;
     setPickPurpose(null);
     if (!purpose) return;
     const { lat, lng } = picked;
+    if (purpose === 'from' || purpose === 'to') {
+      const endpoint: Endpoint = {
+        label: picked.address ?? picked.description,
+        lat,
+        lng,
+        kind: 'map',
+      };
+      setDirections((d) => ({ from: d?.from ?? null, to: d?.to ?? null, [purpose]: endpoint }));
+      return;
+    }
     if (purpose === 'pin') {
       focusPlace({ id: 'pin', kind: 'pin', label: 'Dropped pin', lat, lng });
       return;
@@ -106,7 +149,7 @@ export function App() {
   // While the search bar is expanded or a map point is being picked, the rest fades away.
   const fade = (hide: boolean) =>
     `transition-opacity duration-300 ${hide ? 'pointer-events-none opacity-0' : ''}`;
-  const hideWhenSearching = fade(searchOpen || picking);
+  const hideWhenSearching = fade(searchOpen || picking || directionsOpen);
   const hideOnlyWhenSearching = fade(searchOpen);
 
   return (
@@ -118,6 +161,7 @@ export function App() {
             routes={routes}
             vehicles={vehicles}
             selectedStop={selectedStop}
+            itinerary={plannedItinerary}
             selectedRoutes={selectedRoutes}
             routePaths={routePaths}
             userLocation={userLocation}
@@ -151,7 +195,7 @@ export function App() {
         <SearchBar
           expanded={searchOpen}
           onExpandedChange={setSearchOpen}
-          hidden={picking}
+          hidden={picking || directionsOpen}
           places={places}
           routes={routes}
           selectedRouteIds={routeIds}
@@ -215,8 +259,32 @@ export function App() {
                     }
               }
               onShowStop={showStopArrivals}
+              onDirections={() =>
+                openDirections({
+                  to: {
+                    label: focusedPlace.label,
+                    lat: focusedPlace.lat,
+                    lng: focusedPlace.lng,
+                    kind: 'place',
+                  },
+                })
+              }
             />
           </div>
+        )}
+
+        {directions && (
+          <DirectionsPanel
+            from={directions.from}
+            to={directions.to}
+            onChange={setDirections}
+            places={places}
+            hidden={picking}
+            onClose={closeDirections}
+            onItineraryChange={setPlannedItinerary}
+            onUseMyLocation={myLocationEndpoint}
+            onPickOnMap={setPickPurpose}
+          />
         )}
 
         {pickPurpose && (

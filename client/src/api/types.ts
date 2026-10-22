@@ -63,6 +63,38 @@ export interface Place {
 
 export type NewPlace = Omit<Place, 'id'>;
 
+/** One end of a leg. The name is absent for the trip's own start and destination. */
+export interface PlanPlace {
+  name?: string;
+  lat: number;
+  lng: number;
+}
+
+/** Either a walk or a ride on one route. */
+export interface Leg {
+  mode: 'walk' | 'transit';
+  from: PlanPlace;
+  to: PlanPlace;
+  distanceM: number;
+  durationS: number;
+  path: LngLat[];
+  /** Transit legs only. */
+  routeId?: string;
+  routeNumber?: string;
+  type?: TransportType;
+  stopCount?: number;
+  /** Time spent waiting at the boarding stop, in seconds. */
+  waitS?: number;
+}
+
+export interface Itinerary {
+  /** Door to door, including waiting. */
+  durationS: number;
+  walkM: number;
+  transfers: number;
+  legs: Leg[];
+}
+
 export interface GeocodeResult {
   label: string;
   /** Secondary line, e.g. the district and city. */

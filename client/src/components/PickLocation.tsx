@@ -20,13 +20,18 @@ export interface PickedLocation {
   icon: string;
 }
 
+/** What the chosen point is for: a kind of saved place, or one end of a journey. */
+export type PickPurpose = PlaceKind | 'from' | 'to';
+
 interface Props {
-  purpose: PlaceKind;
+  purpose: PickPurpose;
   onConfirm: (picked: PickedLocation) => void;
   onCancel: () => void;
 }
 
-const TITLES: Record<PlaceKind, string> = {
+const TITLES: Record<PickPurpose, string> = {
+  from: 'Choose starting point',
+  to: 'Choose destination',
   home: 'Set your home',
   work: 'Set your work',
   custom: 'Add a place',
@@ -193,7 +198,11 @@ export function PickLocation({ purpose, onConfirm, onCancel }: Props) {
               disabled={!center}
               onClick={confirm}
             >
-              {purpose === 'pin' ? 'Drop pin here' : 'Save here'}
+              {purpose === 'pin'
+                ? 'Drop pin here'
+                : purpose === 'from' || purpose === 'to'
+                  ? 'Use this point'
+                  : 'Save here'}
             </button>
             <button
               className="rounded-full px-4 py-2 text-sm hover:bg-ink-100 dark:hover:bg-ink-700"

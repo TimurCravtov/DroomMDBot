@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTransportClient } from '../api/context';
+import type { LatLng } from '../api/geo';
 import type {
   Arrival,
   GeocodeResult,
+  Itinerary,
   LngLat,
   LocationInfo,
   NewPlace,
@@ -219,4 +221,48 @@ export function useRoutePaths(routeIds: readonly string[]): Record<string, LngLa
   }, [client, routeIds.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return paths;
+}
+
+/** How often a shown journey is re-planned, so waits follow the live vehicles. */
+const PLAN_REFRESH_MS = 30_000;
+
+/** Journeys between two points; refreshed in the background while both are set. */
+export function usePlan(
+  from: LatLng | null,
+  to: LatLng | null,
+): { data?: Itinerary[]; loading: boolean; error?: Error } {
+  const client = useTransportClient();
+  const [state, setState] = useState<{ data?: Itinerary[]; loading: boolean; error?: Error }>({
+    loading: false,
+  });
+  const key = from && to ? `${from.lat},${from.lng}>${to.lat},${to.lng}` : '';
+
+  useEffect(() => {
+    if (!from || !to) {
+      setState({ loading: false });
+      return;
+    }
+    let cancelled = false;
+    setState({ loading: true });
+
+    const run = (quiet: boolean) =>
+      client
+        .planTrip(from, to)
+        .then((data) => !cancelled && setState({ data, loading: false }))
+        .catch((error: Error) => {
+          // A failed background refresh keeps showing the last good result.
+          if (!cancelled && !quiet) setState({ loading: false, error });
+        });
+
+    void run(false);
+    const timer = setInterval(() => void run(true), PLAN_REFRESH_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+    // `from` / `to` are rebuilt every render; `key` identifies when they really change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client, key]);
+
+  return state;
 }

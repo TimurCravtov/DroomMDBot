@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMap } from 'react-map-gl/maplibre';
+import { getCurrentLocation } from '../map/geolocation';
 import type { UserLocation } from '../map/types';
 import { MAP_ID } from './TransitMap';
 import { hoverRow, roundButton, surface } from './ui';
@@ -45,23 +46,13 @@ export function LocateButton({ onLocated }: { onLocated: (location: UserLocation
   const locate = () => {
     if (!map) return;
     setStatus('locating');
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        onLocated({
-          lng: coords.longitude,
-          lat: coords.latitude,
-          accuracy: coords.accuracy,
-          heading: coords.heading,
-        });
-        map.flyTo({
-          center: [coords.longitude, coords.latitude],
-          zoom: Math.max(map.getZoom(), 16),
-        });
+    getCurrentLocation()
+      .then((location) => {
+        onLocated(location);
+        map.flyTo({ center: [location.lng, location.lat], zoom: Math.max(map.getZoom(), 16) });
         setStatus('idle');
-      },
-      () => setStatus('denied'),
-      { enableHighAccuracy: true, timeout: 10_000 },
-    );
+      })
+      .catch(() => setStatus('denied'));
   };
 
   return (

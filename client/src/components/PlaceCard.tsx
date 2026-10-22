@@ -1,4 +1,4 @@
-import { TbBus, TbTrash, TbX } from 'react-icons/tb';
+import { TbBus, TbDirections, TbTrash, TbX } from 'react-icons/tb';
 import type { Place, Stop } from '../api';
 import { useLocationInfo } from '../hooks/useTransport';
 import { PlaceIcon } from './PlaceIcon';
@@ -10,10 +10,12 @@ interface Props {
   /** Only offered for saved places. */
   onRemove?: () => void;
   onShowStop: (stop: Stop) => void;
+  /** Plan a journey to this place. */
+  onDirections: () => void;
 }
 
 /** Details of the focused place, with a shortcut to the nearest stop's arrivals. */
-export function PlaceCard({ place, onClose, onRemove, onShowStop }: Props) {
+export function PlaceCard({ place, onClose, onRemove, onShowStop, onDirections }: Props) {
   const info = useLocationInfo(place);
 
   return (
@@ -30,6 +32,13 @@ export function PlaceCard({ place, onClose, onRemove, onShowStop }: Props) {
       </div>
 
       <div className="mt-3 flex flex-col gap-1">
+        <button
+          className="flex items-center justify-center gap-2 rounded-full bg-ink-900 py-2 text-sm font-semibold text-white dark:bg-white dark:text-ink-900"
+          onClick={onDirections}
+        >
+          <TbDirections className="h-5 w-5" />
+          Directions
+        </button>
         {info?.nearestStop && (
           <button
             className={`flex items-center gap-2 rounded-lg px-2 py-2 text-left text-sm ${hoverRow}`}

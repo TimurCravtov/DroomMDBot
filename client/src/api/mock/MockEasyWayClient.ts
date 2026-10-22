@@ -2,6 +2,7 @@ import type { TransportClient } from '../client';
 import type {
   Arrival,
   GeocodeResult,
+  Itinerary,
   LngLat,
   LocationInfo,
   NewPlace,
@@ -125,6 +126,11 @@ export class MockEasyWayClient implements TransportClient {
       });
     }
     return this.respond(arrivals.sort((a, b) => a.etaSeconds - b.etaSeconds));
+  }
+
+  /** The mock network is too small to plan on; use the live client for journeys. */
+  planTrip(): Promise<Itinerary[]> {
+    return this.respond([]);
   }
 
   getRoutePaths(routeId: string): Promise<LngLat[][]> {

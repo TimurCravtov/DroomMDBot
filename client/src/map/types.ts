@@ -1,3 +1,11 @@
+/** One end of a planned journey. */
+export interface Endpoint {
+  label: string;
+  lat: number;
+  lng: number;
+  kind: 'me' | 'place' | 'stop' | 'address' | 'map';
+}
+
 export interface UserLocation {
   lng: number;
   lat: number;

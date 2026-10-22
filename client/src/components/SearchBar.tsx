@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { TbArrowLeft, TbChevronRight, TbMap2, TbMapPin, TbPlus, TbSearch, TbX } from 'react-icons/tb';
+import { TbArrowLeft, TbChevronRight, TbDirections, TbMap2, TbMapPin, TbPlus, TbSearch, TbX } from 'react-icons/tb';
 import type { GeocodeResult, Place, Route, StopSearchResult, TransportType } from '../api';
 import { useGeocode, useSearch } from '../hooks/useTransport';
 import { PlaceIcon } from './PlaceIcon';
@@ -9,7 +9,7 @@ import { TypeBadge, TYPE_LABEL } from './TypeBadge';
 import { TypeFilter } from './TypeFilter';
 import { closeButton, hoverRow, mutedText, surface } from './ui';
 
-export type SearchShortcut = 'home' | 'work' | 'add' | 'map';
+export type SearchShortcut = 'home' | 'work' | 'add' | 'map' | 'directions';
 
 interface Props {
   expanded: boolean;
@@ -210,6 +210,11 @@ export function SearchBar({
 
         {expanded && !hasQuery && !browsing && (
           <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2 pt-2 [scrollbar-width:none]">
+            <Chip
+              icon={<TbDirections className="h-4 w-4" />}
+              label="Directions"
+              onClick={() => pick(() => onShortcut('directions'))}
+            />
             <Chip
               icon={<PlaceIcon kind="home" className="h-4 w-4" />}
               label="Home"
