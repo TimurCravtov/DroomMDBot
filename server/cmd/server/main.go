@@ -19,6 +19,7 @@ import (
 	"droommd/server/internal/httpapi"
 	"droommd/server/internal/transit"
 	"droommd/server/internal/tranzy"
+	"droommd/server/internal/walking"
 )
 
 func main() {
@@ -48,9 +49,14 @@ func main() {
 	live := fleet.New()
 	go live.Run(ctx, up, &current, cfg)
 
+	var walker *walking.Client
+	if cfg.WalkingURL != "" && cfg.WalkingURL != "off" {
+		walker = walking.New(cfg.WalkingURL, cfg.GeocoderAgent)
+	}
+
 	srv := &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           httpapi.New(cfg, &current, live, geocode.New(cfg.GeocoderURL, cfg.GeocoderAgent)).Handler(),
+		Handler:           httpapi.New(cfg, &current, live, geocode.New(cfg.GeocoderURL, cfg.GeocoderAgent), walker).Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 		// No WriteTimeout: it would cut off the event stream.
 	}

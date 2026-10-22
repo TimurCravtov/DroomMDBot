@@ -49,6 +49,8 @@ interface Props {
   focusedPlace: Place | null;
   /** A planned journey to draw and frame, if any. */
   itinerary: Itinerary | null;
+  /** True while the directions panel is the small summary bar. */
+  directionsCompact: boolean;
   /** These routes are drawn (using `routePaths`) and framed. */
   selectedRoutes: Route[];
   /** Drawable paths per route id, as [lng, lat] lists; routes still loading are absent. */
@@ -69,6 +71,7 @@ function ViewController({
   routesKey,
   itineraryPoints,
   itineraryKey,
+  directionsCompact,
 }: {
   selectedStop: Stop | null;
   focusedPlace: Place | null;
@@ -76,6 +79,8 @@ function ViewController({
   itineraryPoints: LngLat[];
   /** Changes when a different journey is shown. */
   itineraryKey: string;
+  /** The directions panel is small, so less of the map is covered. */
+  directionsCompact: boolean;
   /** Every point of every selected route, used to frame them all. */
   routePoints: LngLat[];
   /** Changes when the set of drawn routes changes. */
@@ -127,13 +132,15 @@ function ViewController({
         [Math.max(...lngs), Math.max(...lats)],
       ],
       {
-        padding: wide
-          ? { top: 60, bottom: 60, left: Math.min(470, w * 0.5), right: 60 }
-          : { top: Math.min(380, h * 0.55), bottom: 90, left: 40, right: 40 },
+        padding: directionsCompact
+          ? { top: Math.min(190, h * 0.4), bottom: 90, left: wide ? 60 : 40, right: wide ? 60 : 40 }
+          : wide
+            ? { top: 60, bottom: 60, left: Math.min(470, w * 0.5), right: 60 }
+            : { top: Math.min(380, h * 0.55), bottom: 90, left: 40, right: 40 },
         maxZoom: 17,
       },
     );
-  }, [map, itineraryKey]);
+  }, [map, itineraryKey, directionsCompact]);
 
   return null;
 }
@@ -146,6 +153,7 @@ export function TransitMap({
   places,
   focusedPlace,
   itinerary,
+  directionsCompact,
   selectedRoutes,
   routePaths,
   userLocation,
@@ -263,6 +271,7 @@ export function TransitMap({
         routesKey={routesKey}
         itineraryPoints={itineraryPoints}
         itineraryKey={itineraryKey}
+        directionsCompact={directionsCompact}
       />
 
       {drawnRoutes.map((route) => (

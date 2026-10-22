@@ -18,6 +18,7 @@ type Config struct {
 	CORSOrigin    string
 	GeocoderURL   string
 	GeocoderAgent string
+	WalkingURL    string
 	VehiclePoll   time.Duration
 	MaxVehicleAge time.Duration
 	StaticRefresh time.Duration
@@ -37,6 +38,8 @@ func Load() (Config, error) {
 		GeocoderURL: envOr("GEOCODER_URL", "https://nominatim.openstreetmap.org"),
 		// Nominatim's usage policy asks for an identifying User-Agent.
 		GeocoderAgent: envOr("GEOCODER_USER_AGENT", "droommd-transit/0.1 (+https://github.com/TimurCravtov/DroomMDBot)"),
+		// OSRM-compatible pedestrian router; "off" keeps straight-line walking legs.
+		WalkingURL:    envOr("WALKING_ROUTER_URL", "https://routing.openstreetmap.de/routed-foot"),
 		VehiclePoll:   5 * time.Second,
 		MaxVehicleAge: 5 * time.Minute,
 		StaticRefresh: 6 * time.Hour,

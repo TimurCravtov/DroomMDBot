@@ -27,6 +27,7 @@ from `.env` in this directory or the repository root (real environment variables
 | `STATIC_REFRESH` | `6h` | how often routes, stops and shapes are reloaded |
 | `GEOCODER_URL` | `https://nominatim.openstreetmap.org` | any Nominatim-compatible service |
 | `GEOCODER_USER_AGENT` | `droommd-transit/…` | Nominatim's policy requires an identifying agent |
+| `WALKING_ROUTER_URL` | `https://routing.openstreetmap.de/routed-foot` | OSRM-compatible pedestrian router; `off` keeps straight walking legs |
 | `CORS_ORIGIN` | empty | set to allow another origin; the Vite dev proxy doesn't need it |
 
 ## API
@@ -56,6 +57,8 @@ Response shapes mirror `../client/src/api/types.ts`.
   rides at ~22 km/h along the route's shape, and waits for the next vehicle using the live
   arrival estimates when one is known (5 minutes otherwise). It finds direct trips and trips
   with one transfer, walking up to 800 m to a stop and 300 m between stops.
+- Walking legs follow real streets via FOSSGIS's pedestrian router (cached, a few requests at a
+  time, 4 s budget per plan). If it is slow or down, those legs stay straight lines.
 - Geocoding goes through Nominatim's public instance, which asks for at most one request per
   second: the server queues and caches lookups. Run your own instance for heavy use.
 - Tranzy data is open under an attribute-and-share-alike condition; credit Tranzy in the UI.
@@ -67,6 +70,7 @@ cmd/server/          entry point: wiring and graceful shutdown
 internal/config/     environment and .env loading
 internal/tranzy/     upstream API client and wire types
 internal/geocode/    Nominatim client with caching and rate limiting
+internal/walking/    pedestrian router client (street-following walking paths)
 internal/transit/    domain model, static feed loading, search, arrivals, journey planner
 internal/fleet/      live vehicle polling, snapshot and subscriptions
 internal/httpapi/    HTTP handlers, SSE, middleware

@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react';
-import { TbArrowsUpDown, TbChevronRight, TbWalk, TbX } from 'react-icons/tb';
+import {
+  TbArrowLeft,
+  TbArrowsUpDown,
+  TbChevronDown,
+  TbChevronRight,
+  TbWalk,
+  TbX,
+} from 'react-icons/tb';
 import type { Itinerary, Leg, Place } from '../api';
 import { usePlan } from '../hooks/useTransport';
 import type { Endpoint } from '../map/types';
@@ -20,6 +27,12 @@ interface Props {
   onItineraryChange: (itinerary: Itinerary | null) => void;
   onUseMyLocation: () => Promise<Endpoint>;
   onPickOnMap: (target: 'from' | 'to') => void;
+  /**
+   * Once an itinerary is chosen the panel shrinks to a small bar, so the map (with the
+   * route drawn on it) is what you see. Lifted so the map can frame the route around it.
+   */
+  compact: boolean;
+  onCompactChange: (compact: boolean) => void;
 }
 
 const minutes = (seconds: number) => Math.max(1, Math.round(seconds / 60));
@@ -117,13 +130,21 @@ export function DirectionsPanel({
   onItineraryChange,
   onUseMyLocation,
   onPickOnMap,
+  compact,
+  onCompactChange,
 }: Props) {
   const { data, loading, error } = usePlan(from, to);
   const [selected, setSelected] = useState(0);
+  const [showSteps, setShowSteps] = useState(false);
 
   // A new pair of endpoints starts again from the best itinerary.
   const planKey = from && to ? `${from.lat},${from.lng}>${to.lat},${to.lng}` : '';
-  useEffect(() => setSelected(0), [planKey]);
+  useEffect(() => {
+    setSelected(0);
+    setShowSteps(false);
+    onCompactChange(false); // different endpoints: choose again
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planKey]);
 
   const itinerary = data?.[selected] ?? data?.[0] ?? null;
   useEffect(() => {
@@ -132,12 +153,75 @@ export function DirectionsPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itinerary, from, to]);
 
+  const placement = `absolute left-4 right-4 top-4 z-[1000] transition-opacity duration-300 md:right-auto md:w-[26rem] ${
+    hidden ? 'pointer-events-none opacity-0' : ''
+  }`;
+
+  // Chosen: a small summary bar, leaving the map free.
+  if (compact && from && to && itinerary) {
+    const firstRide = itinerary.legs.find((l) => l.mode === 'transit');
+    return (
+      <div className={placement}>
+        <div className={`rounded-2xl p-3 shadow-lg ${surface}`}>
+          <div className="flex items-start gap-2">
+            <button
+              aria-label="Back to the list of routes"
+              title="Other routes"
+              className={closeButton}
+              onClick={() => onCompactChange(false)}
+            >
+              <TbArrowLeft className="h-5 w-5" />
+            </button>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline gap-2">
+                <span className="text-lg font-semibold">{formatDuration(itinerary.durationS)}</span>
+                <span className={`text-xs ${mutedText}`}>
+                  {itinerary.walkM > 0 ? `${formatDistance(itinerary.walkM)} walk · ` : ''}
+                  {itinerary.transfers === 0
+                    ? firstRide
+                      ? 'direct'
+                      : 'on foot'
+                    : `${itinerary.transfers} change`}
+                </span>
+              </div>
+              <div className="mt-1">
+                <LegSummary legs={itinerary.legs} />
+              </div>
+              {firstRide && (
+                <p className={`mt-1 text-xs ${mutedText}`}>
+                  Next {firstRide.type} {firstRide.routeNumber} in about{' '}
+                  {minutes(firstRide.waitS ?? 0)} min at {firstRide.from.name}
+                </p>
+              )}
+              <p className={`mt-0.5 truncate text-xs ${mutedText}`}>
+                {from.label} → {to.label}
+              </p>
+            </div>
+            <button aria-label="Close directions" className={closeButton} onClick={onClose}>
+              <TbX className="h-5 w-5" />
+            </button>
+          </div>
+
+          <button
+            aria-expanded={showSteps}
+            className={`mt-2 flex w-full items-center justify-center gap-1 rounded-lg py-1.5 text-xs font-medium ${hoverRow}`}
+            onClick={() => setShowSteps((s) => !s)}
+          >
+            {showSteps ? 'Hide steps' : 'Show steps'}
+            <TbChevronDown className={`h-4 w-4 transition-transform ${showSteps ? 'rotate-180' : ''}`} />
+          </button>
+          {showSteps && (
+            <div className="max-h-[40vh] overflow-y-auto">
+              <Steps legs={itinerary.legs} from={from.label} to={to.label} />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div
-      className={`absolute left-4 right-4 top-4 z-[1000] flex max-h-[calc(100vh-2rem)] flex-col transition-opacity duration-300 md:right-auto md:w-[26rem] ${
-        hidden ? 'pointer-events-none opacity-0' : ''
-      }`}
-    >
+    <div className={`${placement} flex max-h-[calc(100vh-2rem)] flex-col`}>
       <div className={`relative z-10 rounded-2xl p-3 shadow-lg ${surface}`}>
         <div className="mb-2 flex items-center justify-between pl-1">
           <h2 className="text-sm font-semibold">Directions</h2>
@@ -201,7 +285,11 @@ export function DirectionsPanel({
                 <button
                   aria-expanded={open}
                   className={`w-full px-4 py-3 text-left ${open ? '' : hoverRow}`}
-                  onClick={() => setSelected(i)}
+                  onClick={() => {
+                    setSelected(i);
+                    setShowSteps(false);
+                    onCompactChange(true);
+                  }}
                 >
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="text-lg font-semibold">{formatDuration(it.durationS)}</span>
@@ -220,11 +308,6 @@ export function DirectionsPanel({
                     </p>
                   )}
                 </button>
-                {open && (
-                  <div className="px-4 pb-4">
-                    <Steps legs={it.legs} from={from.label} to={to.label} />
-                  </div>
-                )}
               </div>
             );
           })}

@@ -39,6 +39,8 @@ export function App() {
     null,
   );
   const [plannedItinerary, setPlannedItinerary] = useState<Itinerary | null>(null);
+  // The panel shrinks to a summary bar once an itinerary is chosen.
+  const [directionsCompact, setDirectionsCompact] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [routesOpen, setRoutesOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
@@ -81,6 +83,7 @@ export function App() {
 
   const openDirections = (ends: { from?: Endpoint; to?: Endpoint }) => {
     setDirections({ from: ends.from ?? null, to: ends.to ?? null });
+    setDirectionsCompact(false);
     if (!ends.from) {
       // Start from where the user is, when that can be found; otherwise they choose.
       myLocationEndpoint().then(
@@ -93,6 +96,7 @@ export function App() {
   const closeDirections = () => {
     setDirections(null);
     setPlannedItinerary(null);
+    setDirectionsCompact(false);
   };
 
   const handleShortcut = (shortcut: SearchShortcut) => {
@@ -163,6 +167,7 @@ export function App() {
             vehicles={vehicles}
             selectedStop={selectedStop}
             itinerary={plannedItinerary}
+            directionsCompact={directionsCompact}
             selectedRoutes={selectedRoutes}
             routePaths={routePaths}
             userLocation={userLocation}
@@ -292,6 +297,8 @@ export function App() {
             onItineraryChange={setPlannedItinerary}
             onUseMyLocation={myLocationEndpoint}
             onPickOnMap={setPickPurpose}
+            compact={directionsCompact}
+            onCompactChange={setDirectionsCompact}
           />
         )}
 

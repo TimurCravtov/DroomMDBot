@@ -3,6 +3,7 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -17,6 +18,7 @@ import (
 	"droommd/server/internal/geo"
 	"droommd/server/internal/geocode"
 	"droommd/server/internal/transit"
+	"droommd/server/internal/walking"
 )
 
 type Server struct {
@@ -24,10 +26,11 @@ type Server struct {
 	ds       *atomic.Pointer[transit.Dataset]
 	fleet    *fleet.Fleet
 	geocoder *geocode.Client
+	walker   *walking.Client // nil: walking legs stay straight lines
 }
 
-func New(cfg config.Config, ds *atomic.Pointer[transit.Dataset], f *fleet.Fleet, g *geocode.Client) *Server {
-	return &Server{cfg: cfg, ds: ds, fleet: f, geocoder: g}
+func New(cfg config.Config, ds *atomic.Pointer[transit.Dataset], f *fleet.Fleet, g *geocode.Client, w *walking.Client) *Server {
+	return &Server{cfg: cfg, ds: ds, fleet: f, geocoder: g, walker: w}
 }
 
 // Handler returns the routed handler with logging and CORS applied.
@@ -257,5 +260,17 @@ func (s *Server) plan(w http.ResponseWriter, r *http.Request) {
 		return 0, false
 	}
 
-	writeJSON(w, http.StatusOK, ds.Plan(from, to, wait))
+	itineraries := ds.Plan(from, to, wait)
+
+	// Walking legs follow real streets when the router answers in time; otherwise they
+	// stay straight lines.
+	if s.walker != nil {
+		ctx, cancel := context.WithTimeout(r.Context(), 4*time.Second)
+		defer cancel()
+		itineraries = transit.RefineWalks(ctx, itineraries, func(ctx context.Context, a, b geo.Point) (transit.WalkRoute, error) {
+			route, err := s.walker.Route(ctx, a, b)
+			return transit.WalkRoute{Path: route.Path, DistanceM: route.DistanceM}, err
+		})
+	}
+	writeJSON(w, http.StatusOK, itineraries)
 }
