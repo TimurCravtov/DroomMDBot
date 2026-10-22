@@ -20,10 +20,15 @@ function rasterStyle(tiles: string[], attribution: string, maxzoom = 19): StyleS
 const OSM_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 const CARTO_ATTRIBUTION = `${OSM_ATTRIBUTION} &copy; <a href="https://carto.com/attributions">CARTO</a>`;
-const cartoTiles = (name: string) =>
-  ['a', 'b', 'c', 'd'].map((s) => `https://${s}.basemaps.cartocdn.com/${name}/{z}/{x}/{y}.png`);
 
-export const MAP_STYLES: MapStyleOption[] = [
+/** Free key from https://www.carto.com/basemaps/apikey/ ; without one CARTO tiles carry a watermark. */
+const CARTO_KEY = import.meta.env.VITE_CARTO_API_KEY as string | undefined;
+const cartoTiles = (name: string) =>
+  ['a', 'b', 'c', 'd'].map(
+    (s) => `https://${s}.basemaps.cartocdn.com/rastertiles/${name}/{z}/{x}/{y}.png?key=${CARTO_KEY}`,
+  );
+
+const ALL_MAP_STYLES: MapStyleOption[] = [
   {
     id: 'streets',
     label: 'Streets',
@@ -57,6 +62,11 @@ export const MAP_STYLES: MapStyleOption[] = [
     ),
   },
 ];
+
+/** Light and Dark are hidden when no CARTO key is configured. */
+export const MAP_STYLES = ALL_MAP_STYLES.filter(
+  (s) => CARTO_KEY || (s.id !== 'light' && s.id !== 'dark'),
+);
 
 export const DEFAULT_MAP_STYLE: MapStyleId = 'streets';
 
