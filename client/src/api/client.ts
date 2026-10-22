@@ -1,4 +1,4 @@
-import type { Arrival, Route, Stop, Unsubscribe, Vehicle } from './types';
+import type { Arrival, Route, SearchResults, Stop, Unsubscribe, Vehicle } from './types';
 
 /**
  * Transport data source. The UI only depends on this interface, so the mock
@@ -8,6 +8,8 @@ export interface TransportClient {
   getStops(): Promise<Stop[]>;
   getRoutes(): Promise<Route[]>;
   getArrivals(stopId: string): Promise<Arrival[]>;
+  /** Finds routes (by number or name) and stops (by name). */
+  search(query: string): Promise<SearchResults>;
   /**
    * Streams live vehicle positions, optionally filtered to one route.
    * Emits the current snapshot immediately, then on every update.

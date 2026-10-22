@@ -1,5 +1,13 @@
 import type { TransportClient } from '../client';
-import type { Arrival, Route, Stop, TransportType, Unsubscribe, Vehicle } from '../types';
+import type {
+  Arrival,
+  Route,
+  SearchResults,
+  Stop,
+  TransportType,
+  Unsubscribe,
+  Vehicle,
+} from '../types';
 import { MOCK_ROUTES, MOCK_STOPS } from './data';
 import { buildLoop, positionAt, type Loop } from './loop';
 
@@ -9,6 +17,9 @@ const SPEED_MS: Record<TransportType, number> = {
   minibus: 8.5,
 };
 const VEHICLES_PER_ROUTE = 3;
+
+/** Lowercase and strip diacritics so "piata" matches "Piața". */
+const normalize = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 
 interface SimVehicle {
   id: string;
@@ -76,6 +87,18 @@ export class MockEasyWayClient implements TransportClient {
       });
     }
     return this.respond(arrivals.sort((a, b) => a.etaSeconds - b.etaSeconds));
+  }
+
+  search(query: string): Promise<SearchResults> {
+    const q = normalize(query.trim());
+    if (!q) return this.respond({ routes: [], stops: [] });
+    return this.respond({
+      routes: MOCK_ROUTES.filter((r) => normalize(`${r.number} ${r.name}`).includes(q)),
+      stops: MOCK_STOPS.filter((s) => normalize(s.name).includes(q)).map((s) => ({
+        ...s,
+        routeNumbers: MOCK_ROUTES.filter((r) => r.stopIds.includes(s.id)).map((r) => r.number),
+      })),
+    });
   }
 
   subscribeVehicles(

@@ -36,4 +36,14 @@ export interface Arrival {
   etaSeconds: number;
 }
 
+export interface StopSearchResult extends Stop {
+  /** Numbers of the routes that call at this stop. */
+  routeNumbers: string[];
+}
+
+export interface SearchResults {
+  routes: Route[];
+  stops: StopSearchResult[];
+}
+
 export type Unsubscribe = () => void;

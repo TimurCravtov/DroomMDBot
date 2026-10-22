@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTransportClient } from '../api/context';
-import type { Arrival, Route, Stop, Vehicle } from '../api';
+import type { Arrival, Route, SearchResults, Stop, Vehicle } from '../api';
 
 interface Fetched<T> {
   data: T | undefined;
@@ -63,4 +63,43 @@ export function useVehicles(routeId: string | null): Vehicle[] {
   useEffect(() => client.subscribeVehicles(routeId, setVehicles), [client, routeId]);
 
   return vehicles;
+}
+
+/** Debounced search; `data` is undefined for an empty query. */
+export function useSearch(
+  query: string,
+  debounceMs = 150,
+): { data: SearchResults | undefined; loading: boolean } {
+  const client = useTransportClient();
+  const [data, setData] = useState<SearchResults>();
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const q = query.trim();
+    if (!q) {
+      setData(undefined);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    const timer = setTimeout(async () => {
+      try {
+        const results = await client.search(q);
+        if (!cancelled) setData(results);
+      } catch {
+        if (!cancelled) setData(undefined);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }, debounceMs);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [client, query, debounceMs]);
+
+  return { data, loading };
 }
