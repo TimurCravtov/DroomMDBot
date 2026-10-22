@@ -19,6 +19,10 @@ type Config struct {
 	GeocoderURL   string
 	GeocoderAgent string
 	WalkingURL    string
+	DBPath        string
+	BotToken      string
+	AllowAnon     bool
+	AuthMaxAge    time.Duration
 	VehiclePoll   time.Duration
 	MaxVehicleAge time.Duration
 	StaticRefresh time.Duration
@@ -40,6 +44,10 @@ func Load() (Config, error) {
 		GeocoderAgent: envOr("GEOCODER_USER_AGENT", "droommd-transit/0.1 (+https://github.com/TimurCravtov/DroomMDBot)"),
 		// OSRM-compatible pedestrian router; "off" keeps straight-line walking legs.
 		WalkingURL:    envOr("WALKING_ROUTER_URL", "https://routing.openstreetmap.de/routed-foot"),
+		DBPath:        envOr("DB_PATH", "data/droommd.db"),
+		BotToken:      os.Getenv("TELEGRAM_BOT_TOKEN"),
+		AllowAnon:     os.Getenv("AUTH_ALLOW_ANON") == "true",
+		AuthMaxAge:    24 * time.Hour,
 		VehiclePoll:   5 * time.Second,
 		MaxVehicleAge: 5 * time.Minute,
 		StaticRefresh: 6 * time.Hour,
@@ -52,6 +60,7 @@ func Load() (Config, error) {
 		"VEHICLE_POLL":    &cfg.VehiclePoll,
 		"MAX_VEHICLE_AGE": &cfg.MaxVehicleAge,
 		"STATIC_REFRESH":  &cfg.StaticRefresh,
+		"AUTH_MAX_AGE":    &cfg.AuthMaxAge,
 	} {
 		if v := os.Getenv(name); v != "" {
 			d, err := time.ParseDuration(v)

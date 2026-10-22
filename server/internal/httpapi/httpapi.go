@@ -13,24 +13,40 @@ import (
 	"sync/atomic"
 	"time"
 
+	"droommd/server/internal/auth"
 	"droommd/server/internal/config"
 	"droommd/server/internal/fleet"
 	"droommd/server/internal/geo"
 	"droommd/server/internal/geocode"
+	"droommd/server/internal/store"
 	"droommd/server/internal/transit"
 	"droommd/server/internal/walking"
 )
+
+// Deps are the services the handlers use.
+type Deps struct {
+	Dataset  *atomic.Pointer[transit.Dataset]
+	Fleet    *fleet.Fleet
+	Geocoder *geocode.Client
+	Walker   *walking.Client // nil: walking legs stay straight lines
+	Store    *store.Store
+}
 
 type Server struct {
 	cfg      config.Config
 	ds       *atomic.Pointer[transit.Dataset]
 	fleet    *fleet.Fleet
 	geocoder *geocode.Client
-	walker   *walking.Client // nil: walking legs stay straight lines
+	walker   *walking.Client
+	store    *store.Store
+	auth     auth.Config
 }
 
-func New(cfg config.Config, ds *atomic.Pointer[transit.Dataset], f *fleet.Fleet, g *geocode.Client, w *walking.Client) *Server {
-	return &Server{cfg: cfg, ds: ds, fleet: f, geocoder: g, walker: w}
+func New(cfg config.Config, d Deps) *Server {
+	return &Server{
+		cfg: cfg, ds: d.Dataset, fleet: d.Fleet, geocoder: d.Geocoder, walker: d.Walker, store: d.Store,
+		auth: auth.Config{BotToken: cfg.BotToken, MaxAge: cfg.AuthMaxAge, AllowAnon: cfg.AllowAnon},
+	}
 }
 
 // Handler returns the routed handler with logging and CORS applied.
@@ -46,6 +62,13 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/plan", s.plan)
 	mux.HandleFunc("GET /api/vehicles", s.vehicles)
 	mux.HandleFunc("GET /api/vehicles/stream", s.streamVehicles)
+
+	// Per-user data: every one of these needs a verified caller.
+	mine := func(h http.HandlerFunc) http.Handler { return s.auth.Middleware(h) }
+	mux.Handle("GET /api/me/places", mine(s.listPlaces))
+	mux.Handle("POST /api/me/places", mine(s.savePlace))
+	mux.Handle("DELETE /api/me/places/{id}", mine(s.deletePlace))
+	mux.Handle("DELETE /api/me", mine(s.deleteMe))
 	return s.withCORS(withLogging(mux))
 }
 
@@ -66,11 +89,16 @@ func cacheStatic(w http.ResponseWriter) {
 	w.Header().Set("Cache-Control", "public, max-age=300")
 }
 
-func (s *Server) health(w http.ResponseWriter, _ *http.Request) {
+func (s *Server) health(w http.ResponseWriter, r *http.Request) {
 	ds := s.ds.Load()
 	vehicles, updated := s.fleet.Live()
+	storage := "ok"
+	if err := s.store.Ping(r.Context()); err != nil {
+		storage = "unavailable"
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"status":          "ok",
+		"storage":         storage,
 		"routes":          len(ds.Routes),
 		"stops":           len(ds.Stops),
 		"vehicles":        len(vehicles),

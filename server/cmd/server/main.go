@@ -17,6 +17,7 @@ import (
 	"droommd/server/internal/fleet"
 	"droommd/server/internal/geocode"
 	"droommd/server/internal/httpapi"
+	"droommd/server/internal/store"
 	"droommd/server/internal/transit"
 	"droommd/server/internal/tranzy"
 	"droommd/server/internal/walking"
@@ -35,6 +36,20 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	if cfg.BotToken == "" && !cfg.AllowAnon {
+		log.Print("warning: neither TELEGRAM_BOT_TOKEN nor AUTH_ALLOW_ANON is set, so nobody can sign in to save places")
+	}
+	if cfg.AllowAnon {
+		log.Print("warning: AUTH_ALLOW_ANON is on: any browser can create an anonymous account (fine for testing)")
+	}
+
+	db, err := store.Open(cfg.DBPath)
+	if err != nil {
+		log.Fatalf("opening database %s: %v", cfg.DBPath, err)
+	}
+	defer db.Close()
+	log.Printf("database: %s", cfg.DBPath)
 
 	up := tranzy.New(cfg.BaseURL, cfg.APIKey, cfg.AgencyID)
 
@@ -60,8 +75,14 @@ func main() {
 	}
 
 	srv := &http.Server{
-		Addr:              cfg.Addr,
-		Handler:           httpapi.New(cfg, &current, live, geocode.New(cfg.GeocoderURL, cfg.GeocoderAgent), walker).Handler(),
+		Addr: cfg.Addr,
+		Handler: httpapi.New(cfg, httpapi.Deps{
+			Dataset:  &current,
+			Fleet:    live,
+			Geocoder: geocode.New(cfg.GeocoderURL, cfg.GeocoderAgent),
+			Walker:   walker,
+			Store:    db,
+		}).Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 		// No WriteTimeout: it would cut off the event stream.
 	}
