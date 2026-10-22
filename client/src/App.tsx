@@ -82,7 +82,14 @@ export function App() {
           ? 'Work'
           : picked.name.trim() || picked.address || picked.description;
     focusPlace(
-      await savePlace({ kind: purpose, label, lat, lng, address: picked.address ?? undefined }),
+      await savePlace({
+        kind: purpose,
+        label,
+        lat,
+        lng,
+        address: picked.address ?? undefined,
+        icon: purpose === 'custom' ? picked.icon : undefined,
+      }),
     );
   };
 

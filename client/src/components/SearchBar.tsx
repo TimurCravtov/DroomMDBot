@@ -220,7 +220,7 @@ export function SearchBar({
             {customPlaces.map((p) => (
               <Chip
                 key={p.id}
-                icon={<PlaceIcon kind="custom" className="h-4 w-4" />}
+                icon={<PlaceIcon kind="custom" icon={p.icon} className="h-4 w-4" />}
                 label={p.label}
                 onClick={() => pick(() => onSelectPlace(p))}
               />
@@ -353,7 +353,7 @@ export function SearchBar({
                     className={`flex w-full items-center gap-3 px-4 py-3 text-left ${hoverRow}`}
                     onClick={() => pick(() => onSelectPlace(p))}
                   >
-                    <PlaceIcon kind={p.kind} className="h-5 w-5 shrink-0 text-ink-400" />
+                    <PlaceIcon kind={p.kind} icon={p.icon} className="h-5 w-5 shrink-0 text-ink-400" />
                     <span className="truncate text-sm font-medium">{p.label}</span>
                   </button>
                 </li>

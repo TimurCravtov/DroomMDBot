@@ -19,7 +19,7 @@ export function PlaceCard({ place, onClose, onRemove, onShowStop }: Props) {
   return (
     <div className={`rounded-2xl p-4 shadow-lg ${surface}`}>
       <div className="flex items-start gap-3">
-        <PlaceIcon kind={place.kind} className="mt-0.5 h-5 w-5 shrink-0" />
+        <PlaceIcon kind={place.kind} icon={place.icon} className="mt-0.5 h-5 w-5 shrink-0" />
         <div className="min-w-0 flex-1">
           <h2 className="text-base font-semibold leading-tight">{place.label}</h2>
           <p className={`text-xs ${mutedText}`}>{place.address ?? info?.label ?? 'Locating…'}</p>

@@ -55,6 +55,8 @@ export interface Place {
   label: string;
   /** Street address, when the place was found by address. */
   address?: string;
+  /** Icon the user picked for a custom place (a key of PLACE_ICONS in the UI). */
+  icon?: string;
   lat: number;
   lng: number;
 }

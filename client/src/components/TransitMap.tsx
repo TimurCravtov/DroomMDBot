@@ -288,7 +288,7 @@ export function TransitMap({
                 focused ? 'h-9 w-9' : 'h-7 w-7'
               }`}
             >
-              <PlaceIcon kind={p.kind} className={focused ? 'h-5 w-5' : 'h-4 w-4'} />
+              <PlaceIcon kind={p.kind} icon={p.icon} className={focused ? 'h-5 w-5' : 'h-4 w-4'} />
             </button>
           </Marker>
         );

@@ -3,6 +3,7 @@ import { TbMapPin, TbMapPinFilled, TbSearch, TbX } from 'react-icons/tb';
 import { useMap } from 'react-map-gl/maplibre';
 import type { GeocodeResult, PlaceKind } from '../api';
 import { useGeocode, useLocationInfo } from '../hooks/useTransport';
+import { DEFAULT_PLACE_ICON, PLACE_ICONS, PLACE_ICON_KEYS } from './placeIcons';
 import { MAP_ID } from './TransitMap';
 import { closeButton, mutedText, surface } from './ui';
 
@@ -15,6 +16,8 @@ export interface PickedLocation {
   description: string;
   /** Street address, if one was chosen and the pin hasn't been moved away from it. */
   address: string | null;
+  /** Icon key chosen for a custom place. */
+  icon: string;
 }
 
 interface Props {
@@ -44,6 +47,7 @@ export function PickLocation({ purpose, onConfirm, onCancel }: Props) {
   const map = useMap()[MAP_ID];
   const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [name, setName] = useState('');
+  const [icon, setIcon] = useState(DEFAULT_PLACE_ICON);
   const [addressQuery, setAddressQuery] = useState('');
   const [chosen, setChosen] = useState<GeocodeResult | null>(null);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
@@ -79,7 +83,7 @@ export function PickLocation({ purpose, onConfirm, onCancel }: Props) {
 
   const confirm = () => {
     if (!center) return;
-    onConfirm({ ...center, name, description: info?.label ?? 'Dropped pin', address });
+    onConfirm({ ...center, name, description: info?.label ?? 'Dropped pin', address, icon });
   };
 
   return (
@@ -150,6 +154,32 @@ export function PickLocation({ purpose, onConfirm, onCancel }: Props) {
               className="mt-3 w-full rounded-lg bg-ink-100 px-3 py-2 text-sm outline-none placeholder:text-ink-400 focus:ring-2 focus:ring-ink-400 dark:bg-ink-900"
               onChange={(e) => setName(e.target.value)}
             />
+          )}
+
+          {purpose === 'custom' && (
+            <div role="radiogroup" aria-label="Icon" className="mt-3 grid grid-cols-6 gap-1.5">
+              {PLACE_ICON_KEYS.map((key) => {
+                const { label, Icon } = PLACE_ICONS[key];
+                const selected = key === icon;
+                return (
+                  <button
+                    key={key}
+                    role="radio"
+                    aria-checked={selected}
+                    aria-label={label}
+                    title={label}
+                    onClick={() => setIcon(key)}
+                    className={`flex h-9 items-center justify-center rounded-lg ${
+                      selected
+                        ? 'bg-ink-900 text-white dark:bg-white dark:text-ink-900'
+                        : 'bg-ink-100 text-ink-600 hover:bg-ink-200 dark:bg-ink-900 dark:text-ink-300 dark:hover:bg-ink-700'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </button>
+                );
+              })}
+            </div>
           )}
 
           <div className="mt-3 flex gap-2">
