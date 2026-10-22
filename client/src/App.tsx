@@ -2,12 +2,15 @@ import { useState } from 'react';
 import { ArrivalsPanel } from './components/ArrivalsPanel';
 import { MapControls } from './components/MapControls';
 import { SearchBar } from './components/SearchBar';
+import { SettingsMenu } from './components/SettingsMenu';
 import { StyleSwitcher } from './components/StyleSwitcher';
 import { TransitMap } from './components/TransitMap';
 import { TYPE_BADGE } from './components/typeStyles';
+import { useTheme } from './hooks/useTheme';
 import { useArrivals, useRoutes, useStops, useVehicles } from './hooks/useTransport';
 import { loadMapStyleId, saveMapStyleId, type MapStyleId } from './map/mapStyles';
 import type { UserLocation } from './map/types';
+import { closeButton, mutedText, surface } from './components/ui';
 
 export function App() {
   const { data: routes = [] } = useRoutes();
@@ -15,6 +18,7 @@ export function App() {
   const [routeId, setRouteId] = useState<string | null>(null);
   const [stopId, setStopId] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
+  const { preference: theme, setPreference: setTheme } = useTheme();
   const [mapStyleId, setMapStyleId] = useState<MapStyleId>(loadMapStyleId);
 
   const changeMapStyle = (id: MapStyleId) => {
@@ -44,6 +48,7 @@ export function App() {
       </div>
 
       <div className="absolute bottom-10 right-3 z-10 flex flex-col items-center gap-2">
+        <SettingsMenu theme={theme} onThemeChange={setTheme} />
         <StyleSwitcher value={mapStyleId} onChange={changeMapStyle} />
         <MapControls onLocated={setUserLocation} />
       </div>
@@ -60,15 +65,15 @@ export function App() {
         </div>
 
         {selectedRoute && (
-          <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-white py-1.5 pl-4 pr-2 text-sm shadow-lg ring-1 ring-slate-200">
+          <div className={`pointer-events-auto flex items-center gap-2 rounded-full py-1.5 pl-4 pr-2 text-sm shadow-lg ${surface}`}>
             <span className="font-bold">{selectedRoute.number}</span>
             <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${TYPE_BADGE[selectedRoute.type]}`}>
               {selectedRoute.type}
             </span>
-            <span className="text-slate-600">{selectedRoute.name}</span>
+            <span className={mutedText}>{selectedRoute.name}</span>
             <button
               aria-label="Show all routes"
-              className="rounded-full px-2 text-lg leading-none text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              className={closeButton}
               onClick={() => setRouteId(null)}
             >
               ×

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useMap } from 'react-map-gl/maplibre';
 import type { UserLocation } from '../map/types';
 import { MAP_ID } from './TransitMap';
+import { hoverRow, roundButton, surface } from './ui';
 
 interface Props {
   onLocated: (location: UserLocation) => void;
@@ -9,8 +10,6 @@ interface Props {
 
 type LocateStatus = 'idle' | 'locating' | 'denied';
 
-const buttonClass =
-  'flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-700 shadow-lg ring-1 ring-slate-200 hover:bg-slate-50';
 
 /** Compass (reset to north), locate-me and zoom buttons. Must be inside <MapProvider>. */
 export function MapControls({ onLocated }: Props) {
@@ -50,7 +49,7 @@ export function MapControls({ onLocated }: Props) {
       <button
         aria-label="Reset map to north"
         title="Reset to north"
-        className={buttonClass}
+        className={roundButton}
         onClick={() => map?.easeTo({ bearing: 0 })}
       >
         <svg
@@ -69,7 +68,7 @@ export function MapControls({ onLocated }: Props) {
         title={
           status === 'denied' ? 'Location unavailable — check browser permissions' : 'Show my location'
         }
-        className={`${buttonClass} ${status === 'denied' ? '!text-red-500' : ''} ${
+        className={`${roundButton} ${status === 'denied' ? '!text-red-500' : ''} ${
           status === 'locating' ? 'animate-pulse' : ''
         }`}
         onClick={locate}
@@ -80,17 +79,17 @@ export function MapControls({ onLocated }: Props) {
         </svg>
       </button>
 
-      <div className="flex flex-col overflow-hidden rounded-full bg-white shadow-lg ring-1 ring-slate-200">
+      <div className={`flex flex-col overflow-hidden rounded-full shadow-lg ${surface}`}>
         <button
           aria-label="Zoom in"
-          className="flex h-10 w-10 items-center justify-center text-xl text-slate-700 hover:bg-slate-50"
+          className={`flex h-10 w-10 items-center justify-center text-xl ${hoverRow}`}
           onClick={() => map?.zoomIn()}
         >
           +
         </button>
         <button
           aria-label="Zoom out"
-          className="flex h-10 w-10 items-center justify-center border-t border-slate-200 text-xl text-slate-700 hover:bg-slate-50"
+          className={`flex h-10 w-10 items-center justify-center border-t border-ink-200 text-xl dark:border-ink-700 ${hoverRow}`}
           onClick={() => map?.zoomOut()}
         >
           −

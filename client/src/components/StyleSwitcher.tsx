@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { MAP_STYLES, type MapStyleId } from '../map/mapStyles';
+import { hoverRow, roundButton, surface } from './ui';
 
 interface Props {
   value: MapStyleId;
@@ -16,7 +17,7 @@ export function StyleSwitcher({ value, onChange }: Props) {
         aria-label="Change map style"
         aria-expanded={open}
         title="Map style"
-        className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-700 shadow-lg ring-1 ring-slate-200 hover:bg-slate-50"
+        className={roundButton}
         onClick={() => setOpen((o) => !o)}
       >
         <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
@@ -27,12 +28,12 @@ export function StyleSwitcher({ value, onChange }: Props) {
       </button>
 
       {open && (
-        <ul className="absolute bottom-0 right-12 w-36 rounded-2xl bg-white py-1.5 shadow-lg ring-1 ring-slate-200">
+        <ul className={`absolute bottom-0 right-12 w-36 rounded-2xl py-1.5 shadow-lg ${surface}`}>
           {MAP_STYLES.map((s) => (
             <li key={s.id}>
               <button
-                className={`flex w-full items-center justify-between px-4 py-2 text-left text-sm hover:bg-slate-50 ${
-                  s.id === value ? 'font-semibold text-sky-700' : ''
+                className={`flex w-full items-center justify-between px-4 py-2 text-left text-sm ${hoverRow} ${
+                  s.id === value ? 'font-semibold' : ''
                 }`}
                 onClick={() => {
                   onChange(s.id);

@@ -128,7 +128,7 @@ export function TransitMap({
               title={s.name}
               aria-label={s.name}
               onClick={() => onSelectStop(s.id)}
-              className={`block rounded-full border-2 border-slate-800 ${
+              className={`block rounded-full border-2 border-ink-800 ${
                 selected ? 'h-5 w-5 bg-yellow-400' : 'h-3.5 w-3.5 bg-white'
               }`}
             />
@@ -138,7 +138,7 @@ export function TransitMap({
 
       {userLocation && (
         <Marker longitude={userLocation.lng} latitude={userLocation.lat}>
-          <div className="h-4 w-4 rounded-full border-2 border-white bg-blue-600 shadow-md ring-4 ring-blue-600/25" />
+          <div className="h-4 w-4 rounded-full border-2 border-white bg-ink-900 shadow-md ring-4 ring-ink-900/25 dark:bg-white dark:ring-white/25" />
         </Marker>
       )}
 

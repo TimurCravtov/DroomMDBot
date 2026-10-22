@@ -1,1 +1,19 @@
 @import 'tailwindcss';
+
+/* Dark mode follows the `dark` class on <html> (set by hooks/useTheme.ts). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Neutral shades of black, added alongside Tailwind's defaults. */
+@theme {
+  --color-ink-50: #f7f7f7;
+  --color-ink-100: #ededed;
+  --color-ink-200: #dcdcdc;
+  --color-ink-300: #bdbdbd;
+  --color-ink-400: #999999;
+  --color-ink-500: #737373;
+  --color-ink-600: #525252;
+  --color-ink-700: #333333;
+  --color-ink-800: #1f1f1f;
+  --color-ink-900: #121212;
+  --color-ink-950: #000000;
+}
