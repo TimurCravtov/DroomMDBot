@@ -30,7 +30,7 @@ export function App() {
         />
       </div>
 
-      {/* Overlays sit above Leaflet's panes (z-index up to 1000). */}
+      {/* Overlays sit above the map canvas and its controls. */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-[1000] flex flex-col items-center gap-2 p-4">
         <div className="pointer-events-auto w-full max-w-xl">
           <SearchBar
