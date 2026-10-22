@@ -112,7 +112,7 @@ export function PickLocation({ purpose, onConfirm, onCancel }: Props) {
         </div>
       </div>
 
-      <div className="absolute bottom-[5.5rem] left-4 right-4 z-10 sm:right-auto sm:w-96">
+      <div className="absolute bottom-[7rem] left-4 right-4 z-10 sm:right-auto sm:w-96">
         <div className={`rounded-2xl p-4 shadow-lg ${surface}`}>
           <p className="text-sm font-semibold">{info?.label ?? 'Locating…'}</p>
           {info?.nearestStop && (

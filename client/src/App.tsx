@@ -188,7 +188,7 @@ export function App() {
           <LocateButton onLocated={setUserLocation} />
         </div>
 
-        <div className={`absolute bottom-4 left-[3.75rem] z-20 ${hideWhenSearching}`}>
+        <div className={`absolute bottom-16 left-3 z-20 ${hideWhenSearching}`}>
           <RoutePicker
             routes={routes}
             selectedRouteIds={routeIds}
@@ -248,7 +248,7 @@ export function App() {
 
         {selectedStop && (
           <div
-            className={`absolute bottom-[5.5rem] left-4 right-4 z-10 sm:right-auto sm:w-80 ${hideWhenSearching}`}
+            className={`absolute bottom-[7rem] left-4 right-4 z-10 sm:right-auto sm:w-80 ${hideWhenSearching}`}
           >
             <ArrivalsPanel
               stop={selectedStop}
@@ -261,7 +261,7 @@ export function App() {
 
         {focusedPlace && (
           <div
-            className={`absolute bottom-[5.5rem] left-4 right-4 z-10 sm:right-auto sm:w-80 ${hideWhenSearching}`}
+            className={`absolute bottom-[7rem] left-4 right-4 z-10 sm:right-auto sm:w-80 ${hideWhenSearching}`}
           >
             <PlaceCard
               place={focusedPlace}
