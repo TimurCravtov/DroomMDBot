@@ -88,7 +88,7 @@ func (f *Fleet) refresh(ctx context.Context, up *tranzy.Client, ds *transit.Data
 			speed = int(math.Round(*v.Speed))
 		}
 		lv := transit.LiveVehicle{Vehicle: transit.Vehicle{
-			ID: id, RouteID: routeID, Lat: v.Lat, Lng: v.Lon,
+			ID: id, Label: v.Label, RouteID: routeID, Lat: v.Lat, Lng: v.Lon,
 			Heading:  f.headingFor(id, geo.Point{Lat: v.Lat, Lng: v.Lon}),
 			SpeedKmh: speed, UpdatedAt: ts.UnixMilli(),
 		}}

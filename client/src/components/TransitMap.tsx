@@ -29,6 +29,8 @@ const CHISINAU: LngLat = [28.8323, 47.0245];
 
 /** From this zoom on, vehicles show their type icon and route number instead of a plain dot. */
 const VEHICLE_DETAIL_ZOOM = 15;
+/** Upper bound of board-number labels drawn at once, to keep the DOM small. */
+const MAX_LABELS = 80;
 /** Stops are too dense to draw when zoomed further out than this. */
 const STOPS_MIN_ZOOM = 13.5;
 
@@ -169,8 +171,9 @@ export function TransitMap({
   const routePoints = drawnRoutes.flatMap((r) => routePaths[r.id].flat());
   const routesKey = drawnRoutes.map((r) => r.id).join(',');
 
-  const visibleVehicles = useMemo(() => {
-    if (!closeEnough || !bounds) return [];
+  // Vehicles inside the (slightly padded) viewport; only these get DOM markers.
+  const inView = useMemo(() => {
+    if (!bounds) return [];
     const [w, s, e, n] = bounds;
     const padLng = (e - w) * 0.1;
     const padLat = (n - s) * 0.1;
@@ -178,7 +181,10 @@ export function TransitMap({
       (v) =>
         v.lng >= w - padLng && v.lng <= e + padLng && v.lat >= s - padLat && v.lat <= n + padLat,
     );
-  }, [closeEnough, bounds, vehicles]);
+  }, [bounds, vehicles]);
+
+  // Board numbers are only worth showing once the view is narrowed to some routes.
+  const labelled = selectedRoutes.length > 0 ? inView.slice(0, MAX_LABELS) : [];
 
   const syncBounds = (map: { getBounds: () => { toArray: () => number[][] } }) => {
     const [[w, s], [e, n]] = map.getBounds().toArray();
@@ -309,7 +315,7 @@ export function TransitMap({
       </Source>
 
       {/* Close up: icon + number pills, only for vehicles in view. */}
-      {visibleVehicles.map((v) => {
+      {(closeEnough ? inView : []).map((v) => {
         const route = routesById.get(v.routeId);
         if (!route) return null;
         return (
@@ -329,6 +335,21 @@ export function TransitMap({
           </Marker>
         );
       })}
+
+      {labelled.map((v) => (
+        <Marker
+          key={`label-${v.id}`}
+          longitude={v.lng}
+          latitude={v.lat}
+          anchor="top"
+          offset={[0, closeEnough ? 16 : 8]}
+          style={{ zIndex: 11, pointerEvents: 'none' }}
+        >
+          <span className="rounded bg-white/90 px-1 text-[10px] font-medium leading-4 text-ink-900 shadow dark:bg-ink-800/90 dark:text-white">
+            {v.label}
+          </span>
+        </Marker>
+      ))}
     </MapGL>
   );
 }

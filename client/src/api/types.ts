@@ -21,6 +21,8 @@ export interface Route {
 
 export interface Vehicle {
   id: string;
+  /** Board number painted on the vehicle, e.g. "3878". */
+  label: string;
   routeId: string;
   lat: number;
   lng: number;

@@ -57,6 +57,8 @@ function loadPlaces(): Place[] {
 
 interface SimVehicle {
   id: string;
+  /** Fake board number. */
+  label: string;
   route: Route;
   loop: Loop;
   /** Distance along the loop at t = 0. */
@@ -89,6 +91,7 @@ export class MockEasyWayClient implements TransportClient {
       const loop = buildLoop(route.stopIds.map((id) => this.stopById(id)));
       return Array.from({ length: VEHICLES_PER_ROUTE }, (_, i) => ({
         id: `${route.id}-${i + 1}`,
+        label: String(1200 + MOCK_ROUTES.indexOf(route) * 10 + i),
         route,
         loop,
         startOffset: (loop.total / VEHICLES_PER_ROUTE) * i,
@@ -208,6 +211,7 @@ export class MockEasyWayClient implements TransportClient {
         const { lat, lng, heading } = positionAt(v.loop, this.distanceAt(v, now));
         return {
           id: v.id,
+          label: v.label,
           routeId: v.route.id,
           lat,
           lng,

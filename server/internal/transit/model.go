@@ -28,6 +28,7 @@ type StopResult struct {
 // Vehicle is the public live position of one vehicle.
 type Vehicle struct {
 	ID        string  `json:"id"`
+	Label     string  `json:"label"` // board number painted on the vehicle, e.g. "3878"
 	RouteID   string  `json:"routeId"`
 	Lat       float64 `json:"lat"`
 	Lng       float64 `json:"lng"`
