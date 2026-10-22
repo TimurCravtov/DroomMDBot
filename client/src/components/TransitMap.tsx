@@ -2,7 +2,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { useEffect } from 'react';
 import { Layer, Map as MapGL, Marker, Source, useMap } from 'react-map-gl/maplibre';
 import type { Route, Stop, Vehicle } from '../api';
-import { MAP_STYLES } from '../map/mapStyles';
+import { MAP_STYLES, type MapStyleId } from '../map/mapStyles';
 import type { UserLocation } from '../map/types';
 import { TYPE_COLOR } from './typeStyles';
 
@@ -21,6 +21,7 @@ interface Props {
   /** When set, the route's path is drawn and framed. */
   selectedRoute: Route | null;
   userLocation: UserLocation | null;
+  mapStyleId: MapStyleId;
   onSelectStop: (stopId: string) => void;
 }
 
@@ -68,6 +69,7 @@ export function TransitMap({
   selectedStop,
   selectedRoute,
   userLocation,
+  mapStyleId,
   onSelectStop,
 }: Props) {
   const stopsById = new Map(stops.map((s) => [s.id, s]));
@@ -84,7 +86,7 @@ export function TransitMap({
     <MapGL
       id={MAP_ID}
       initialViewState={{ longitude: CHISINAU[0], latitude: CHISINAU[1], zoom: 14 }}
-      mapStyle={MAP_STYLES[0].style}
+      mapStyle={(MAP_STYLES.find((s) => s.id === mapStyleId) ?? MAP_STYLES[0]).style}
       maxPitch={0}
       style={{ width: '100%', height: '100%' }}
     >

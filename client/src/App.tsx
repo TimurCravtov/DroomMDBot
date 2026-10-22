@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { ArrivalsPanel } from './components/ArrivalsPanel';
 import { MapControls } from './components/MapControls';
 import { SearchBar } from './components/SearchBar';
+import { StyleSwitcher } from './components/StyleSwitcher';
 import { TransitMap } from './components/TransitMap';
 import { TYPE_BADGE } from './components/typeStyles';
 import { useArrivals, useRoutes, useStops, useVehicles } from './hooks/useTransport';
+import { loadMapStyleId, saveMapStyleId, type MapStyleId } from './map/mapStyles';
 import type { UserLocation } from './map/types';
 
 export function App() {
@@ -13,6 +15,12 @@ export function App() {
   const [routeId, setRouteId] = useState<string | null>(null);
   const [stopId, setStopId] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
+  const [mapStyleId, setMapStyleId] = useState<MapStyleId>(loadMapStyleId);
+
+  const changeMapStyle = (id: MapStyleId) => {
+    setMapStyleId(id);
+    saveMapStyleId(id);
+  };
 
   const vehicles = useVehicles(routeId);
   const { data: arrivals, error } = useArrivals(stopId);
@@ -30,11 +38,13 @@ export function App() {
           selectedStop={selectedStop}
           selectedRoute={selectedRoute}
           userLocation={userLocation}
+          mapStyleId={mapStyleId}
           onSelectStop={setStopId}
         />
       </div>
 
-      <div className="absolute bottom-10 right-3 z-10">
+      <div className="absolute bottom-10 right-3 z-10 flex flex-col items-center gap-2">
+        <StyleSwitcher value={mapStyleId} onChange={changeMapStyle} />
         <MapControls onLocated={setUserLocation} />
       </div>
 

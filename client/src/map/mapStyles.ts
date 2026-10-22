@@ -1,6 +1,6 @@
 import type { StyleSpecification } from 'maplibre-gl';
 
-export type MapStyleId = 'streets';
+export type MapStyleId = 'streets' | 'light' | 'dark' | 'satellite' | 'topo';
 
 export interface MapStyleOption {
   id: MapStyleId;
@@ -19,6 +19,9 @@ function rasterStyle(tiles: string[], attribution: string, maxzoom = 19): StyleS
 
 const OSM_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+const CARTO_ATTRIBUTION = `${OSM_ATTRIBUTION} &copy; <a href="https://carto.com/attributions">CARTO</a>`;
+const cartoTiles = (name: string) =>
+  ['a', 'b', 'c', 'd'].map((s) => `https://${s}.basemaps.cartocdn.com/${name}/{z}/{x}/{y}.png`);
 
 export const MAP_STYLES: MapStyleOption[] = [
   {
@@ -26,4 +29,53 @@ export const MAP_STYLES: MapStyleOption[] = [
     label: 'Streets',
     style: rasterStyle(['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], OSM_ATTRIBUTION),
   },
+  {
+    id: 'light',
+    label: 'Light',
+    style: rasterStyle(cartoTiles('light_all'), CARTO_ATTRIBUTION, 20),
+  },
+  {
+    id: 'dark',
+    label: 'Dark',
+    style: rasterStyle(cartoTiles('dark_all'), CARTO_ATTRIBUTION, 20),
+  },
+  {
+    id: 'satellite',
+    label: 'Satellite',
+    style: rasterStyle(
+      ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+      'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+    ),
+  },
+  {
+    id: 'topo',
+    label: 'Terrain',
+    style: rasterStyle(
+      ['a', 'b', 'c'].map((s) => `https://${s}.tile.opentopomap.org/{z}/{x}/{y}.png`),
+      `${OSM_ATTRIBUTION}, <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)`,
+      17,
+    ),
+  },
 ];
+
+export const DEFAULT_MAP_STYLE: MapStyleId = 'streets';
+
+const STORAGE_KEY = 'mapStyle';
+
+export function loadMapStyleId(): MapStyleId {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (MAP_STYLES.some((s) => s.id === saved)) return saved as MapStyleId;
+  } catch {
+    // storage unavailable (private mode etc.)
+  }
+  return DEFAULT_MAP_STYLE;
+}
+
+export function saveMapStyleId(id: MapStyleId) {
+  try {
+    localStorage.setItem(STORAGE_KEY, id);
+  } catch {
+    // ignore
+  }
+}
