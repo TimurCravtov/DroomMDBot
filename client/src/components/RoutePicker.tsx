@@ -72,6 +72,7 @@ export function RoutePicker({ routes, selectedRouteIds, onChange }: Props) {
               routes={visible}
               selectedRouteIds={selectedRouteIds}
               onToggle={(id) => onChange(toggleRoute(selectedRouteIds, id))}
+              onPick={(id) => onChange(toggleRoute(selectedRouteIds, id))}
             />
             {visible.length === 0 && (
               <li className={`px-4 py-3 text-sm ${mutedText}`}>No routes of this type.</li>

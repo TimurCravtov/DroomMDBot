@@ -267,8 +267,7 @@ export function SearchBar({
               <RouteChecklistItems
                 routes={suggested}
                 selectedRouteIds={selectedRouteIds}
-                onToggle={(id) => pick(() => onSelectRoute(id))}
-                checkboxes={false}
+                onPick={(id) => pick(() => onSelectRoute(id))}
               />
             </ul>
             <div className="flex border-t border-ink-200 dark:border-ink-700">
@@ -296,6 +295,7 @@ export function SearchBar({
             <RouteChecklistItems
               routes={browseRoutes}
               selectedRouteIds={selectedRouteIds}
+              onPick={(id) => pick(() => onSelectRoute(id))}
               onToggle={toggle}
               roomy
             />
