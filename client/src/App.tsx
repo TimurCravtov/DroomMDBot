@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ArrivalsPanel } from './components/ArrivalsPanel';
 import { CompassButton, LocateButton, ZoomButtons } from './components/MapControls';
 import { MapCredits } from './components/MapCredits';
-import { RoutePicker } from './components/RoutePicker';
+import { RoutePicker, type RoutesTab } from './components/RoutePicker';
 import { DirectionsPanel } from './components/DirectionsPanel';
 import { PickLocation, type PickedLocation, type PickPurpose } from './components/PickLocation';
 import { PlaceCard } from './components/PlaceCard';
@@ -53,6 +53,7 @@ export function App() {
   const [directionsCompact, setDirectionsCompact] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [routesOpen, setRoutesOpen] = useState(false);
+  const [routesTab, setRoutesTab] = useState<RoutesTab>('routes');
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const { preference: theme, setPreference: setTheme } = useTheme();
   const [mapStyleId, setMapStyleId] = useState<MapStyleId>(loadMapStyleId);
@@ -204,6 +205,8 @@ export function App() {
             onChange={setRouteIds}
             open={routesOpen}
             onOpenChange={setRoutesOpen}
+            tab={routesTab}
+            onTabChange={setRoutesTab}
             collections={collections}
             onSaveCollection={(name, routeIds) => saveCollection({ name, routeIds })}
             onUpdateCollection={updateCollection}
@@ -233,7 +236,16 @@ export function App() {
           routes={routes}
           selectedRouteIds={routeIds}
           onRoutesChange={setRouteIds}
-          onViewMoreRoutes={() => setRoutesOpen(true)}
+          onViewMoreRoutes={() => {
+            setRoutesTab('routes');
+            setRoutesOpen(true);
+          }}
+          collections={collections}
+          onShowCollection={setRouteIds}
+          onViewMoreFavourites={() => {
+            setRoutesTab('favourites');
+            setRoutesOpen(true);
+          }}
           onSelectStop={selectStop}
           onSelectPlace={focusPlace}
           onSelectLocation={(l) =>

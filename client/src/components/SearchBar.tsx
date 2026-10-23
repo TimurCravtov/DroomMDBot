@@ -1,12 +1,20 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { TbArrowLeft, TbChevronRight, TbDirections, TbMap2, TbMapPin, TbPlus, TbSearch, TbX } from 'react-icons/tb';
-import type { GeocodeResult, Place, Route, StopSearchResult, TransportType } from '../api';
+import type {
+  GeocodeResult,
+  Place,
+  Route,
+  RouteCollection,
+  StopSearchResult,
+  TransportType,
+} from '../api';
 import { useLabels } from '../hooks/useLabels';
 import { useGeocode, useSearch } from '../hooks/useTransport';
 import { useI18n } from '../i18n';
 import { PlaceIcon } from './PlaceIcon';
 import { RouteChecklistItems } from './RouteChecklist';
 import { RouteNumber } from './RouteColors';
+import { RoutePills } from './RoutePills';
 import { ScrollRow } from './ScrollRow';
 import { TypeBadge } from './TypeBadge';
 import { TypeFilter } from './TypeFilter';
@@ -28,6 +36,12 @@ interface Props {
   onRoutesChange: (routeIds: string[]) => void;
   /** Opens the full Routes panel over the map. */
   onViewMoreRoutes: () => void;
+  /** The user's favourite routes: named collections, offered under the empty field. */
+  collections: RouteCollection[];
+  /** Shows a favourite's routes on the map. */
+  onShowCollection: (routeIds: string[]) => void;
+  /** Opens the Routes panel on its favourites tab. */
+  onViewMoreFavourites: () => void;
   onSelectStop: (stopId: string) => void;
   onSelectRoute: (routeId: string) => void;
   onSelectPlace: (place: Place) => void;
@@ -43,6 +57,9 @@ const COLLAPSED_RIGHT = 'max(7rem, calc(50% - 18rem))';
 
 /** How many trolleybuses and how many buses are suggested under the empty field. */
 const SUGGESTED_PER_TYPE = 3;
+
+/** How many favourites are listed under the empty field before "View all favourites". */
+const SUGGESTED_FAVOURITES = 3;
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -92,6 +109,9 @@ export function SearchBar({
   selectedRouteIds,
   onRoutesChange,
   onViewMoreRoutes,
+  collections,
+  onShowCollection,
+  onViewMoreFavourites,
   onSelectStop,
   onSelectRoute,
   onSelectPlace,
@@ -112,6 +132,11 @@ export function SearchBar({
   const suggested = (['trolleybus', 'bus'] as const).flatMap((t) =>
     allKnownRoutes.filter((r) => r.type === t).slice(0, SUGGESTED_PER_TYPE),
   );
+  const routesById = new Map(allKnownRoutes.map((r) => [r.id, r]));
+  // Favourites whose routes the feed no longer has would open an empty map: leave them out.
+  const favourites = collections
+    .map((c) => ({ collection: c, routes: c.routeIds.flatMap((id) => routesById.get(id) ?? []) }))
+    .filter((f) => f.routes.length > 0);
   const allRoutes: Route[] = data?.routes ?? [];
   const routes = allRoutes.filter((r) => type === null || r.type === type);
   const typesFound = new Set(allRoutes.map((r) => r.type));
@@ -245,39 +270,76 @@ export function SearchBar({
           </ScrollRow>
         )}
 
-        {expanded && !hasQuery && suggested.length > 0 && (
-          <div className={`mt-1 overflow-hidden rounded-2xl shadow-lg ${surface}`}>
-            <div className="flex items-center justify-between px-4 pb-1 pt-3">
-              <h2 className={`text-xs font-medium uppercase tracking-wide ${mutedText}`}>
-                {t('section.routes')}
-              </h2>
-              {selectedRouteIds.length > 0 && (
-                <button
-                  className={`text-xs underline-offset-2 hover:underline ${mutedText}`}
-                  onClick={() => onRoutesChange([])}
+        {expanded && !hasQuery && (favourites.length > 0 || suggested.length > 0) && (
+          <div className="mt-1 max-h-[calc(100dvh-8.5rem)] space-y-2 overflow-y-auto">
+            {favourites.length > 0 && (
+              <div className={`overflow-hidden rounded-2xl shadow-lg ${surface}`}>
+                <h2
+                  className={`px-4 pb-1 pt-3 text-xs font-medium uppercase tracking-wide ${mutedText}`}
                 >
-                  {t('search.clearCount', { count: selectedRouteIds.length })}
-                </button>
-              )}
-            </div>
-            <ul>
-              {/* Tapping a suggestion picks that route and leaves the search for the map;
-                  choosing several is what "View more routes" is for. */}
-              <RouteChecklistItems
-                routes={suggested}
-                selectedRouteIds={selectedRouteIds}
-                onPick={(id) => pick(() => onSelectRoute(id))}
-              />
-            </ul>
-            <div className="flex border-t border-ink-200 dark:border-ink-700">
-              <button
-                className={`flex flex-1 items-center justify-center gap-1 py-2.5 text-sm font-medium ${hoverRow}`}
-                onClick={() => pick(onViewMoreRoutes)}
-              >
-                {t('search.viewMore')}
-                <TbChevronRight className="h-4 w-4" />
-              </button>
-            </div>
+                  {t('search.favourites')}
+                </h2>
+                <ul>
+                  {favourites.slice(0, SUGGESTED_FAVOURITES).map(({ collection, routes }) => (
+                    <li key={collection.id}>
+                      <button
+                        className={`w-full px-4 py-2.5 text-left ${hoverRow}`}
+                        onClick={() => pick(() => onShowCollection(routes.map((r) => r.id)))}
+                      >
+                        <span className="block truncate text-sm font-semibold">{collection.name}</span>
+                        <RoutePills routes={routes} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                {favourites.length > SUGGESTED_FAVOURITES && (
+                  <div className="flex border-t border-ink-200 dark:border-ink-700">
+                    <button
+                      className={`flex flex-1 items-center justify-center gap-1 py-2.5 text-sm font-medium ${hoverRow}`}
+                      onClick={() => pick(onViewMoreFavourites)}
+                    >
+                      {t('search.viewMoreFavourites')}
+                      <TbChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            {suggested.length > 0 && (
+              <div className={`overflow-hidden rounded-2xl shadow-lg ${surface}`}>
+                <div className="flex items-center justify-between px-4 pb-1 pt-3">
+                  <h2 className={`text-xs font-medium uppercase tracking-wide ${mutedText}`}>
+                    {t('section.routes')}
+                  </h2>
+                  {selectedRouteIds.length > 0 && (
+                    <button
+                      className={`text-xs underline-offset-2 hover:underline ${mutedText}`}
+                      onClick={() => onRoutesChange([])}
+                    >
+                      {t('search.clearCount', { count: selectedRouteIds.length })}
+                    </button>
+                  )}
+                </div>
+                <ul>
+                  {/* Tapping a suggestion picks that route and leaves the search for the map;
+                      choosing several is what "View more routes" is for. */}
+                  <RouteChecklistItems
+                    routes={suggested}
+                    selectedRouteIds={selectedRouteIds}
+                    onPick={(id) => pick(() => onSelectRoute(id))}
+                  />
+                </ul>
+                <div className="flex border-t border-ink-200 dark:border-ink-700">
+                  <button
+                    className={`flex flex-1 items-center justify-center gap-1 py-2.5 text-sm font-medium ${hoverRow}`}
+                    onClick={() => pick(onViewMoreRoutes)}
+                  >
+                    {t('search.viewMore')}
+                    <TbChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

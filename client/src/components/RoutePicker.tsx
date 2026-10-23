@@ -16,14 +16,17 @@ interface Props {
   /** Whether the panel is showing. Controlled, so the search can open it too. */
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Which tab shows. Controlled, so the search can open the panel on the favourites. */
+  tab: RoutesTab;
+  onTabChange: (tab: RoutesTab) => void;
   collections: RouteCollection[];
   onSaveCollection: (name: string, routeIds: string[]) => Promise<unknown>;
   onUpdateCollection: (collection: RouteCollection) => Promise<unknown>;
   onDeleteCollection: (collectionId: string) => Promise<unknown>;
 }
 
-type Tab = 'routes' | 'favourites';
-const TABS: { id: Tab; label: MessageKey }[] = [
+export type RoutesTab = 'routes' | 'favourites';
+const TABS: { id: RoutesTab; label: MessageKey }[] = [
   { id: 'routes', label: 'routes.tab.routes' },
   { id: 'favourites', label: 'routes.tab.favourites' },
 ];
@@ -40,6 +43,8 @@ export function RoutePicker({
   onChange,
   open,
   onOpenChange,
+  tab,
+  onTabChange,
   collections,
   onSaveCollection,
   onUpdateCollection,
@@ -47,7 +52,6 @@ export function RoutePicker({
 }: Props) {
   const { t } = useI18n();
   const [type, setType] = useState<TransportType | null>(null);
-  const [tab, setTab] = useState<Tab>('routes');
   const [query, setQuery] = useState('');
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -86,7 +90,10 @@ export function RoutePicker({
 
       {open && (
         <div
-          className={`absolute bottom-12 left-0 z-20 flex h-[min(26rem,45vh)] w-[min(22rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl shadow-lg ${surface}`}
+          // The favourites tab also hosts the editor, which needs room for its filters and list.
+          className={`absolute bottom-12 left-0 z-20 flex w-[min(22rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl shadow-lg ${
+            tab === 'favourites' ? 'h-[min(32rem,62vh)]' : 'h-[min(26rem,45vh)]'
+          } ${surface}`}
         >
           <div
             role="tablist"
@@ -97,7 +104,7 @@ export function RoutePicker({
                 key={tabItem.id}
                 role="tab"
                 aria-selected={tab === tabItem.id}
-                onClick={() => setTab(tabItem.id)}
+                onClick={() => onTabChange(tabItem.id)}
                 className={`flex-1 rounded-full py-1.5 text-sm ${
                   tab === tabItem.id
                     ? 'bg-ink-100 font-semibold dark:bg-ink-900'
