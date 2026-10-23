@@ -41,7 +41,7 @@ const (
 )
 
 // ErrInvalid wraps a problem with data the caller sent.
-var ErrInvalid = errors.New("invalid place")
+var ErrInvalid = errors.New("invalid input")
 
 // ErrLimit is returned when a user already has the maximum number of places.
 var ErrLimit = fmt.Errorf("a user can save at most %d places", MaxPlacesPerUser)
@@ -73,6 +73,17 @@ CREATE INDEX IF NOT EXISTS places_by_user ON places(user_id);
 -- one home and one work per user
 CREATE UNIQUE INDEX IF NOT EXISTS one_home_work
 	ON places(user_id, kind) WHERE kind IN ('home', 'work');
+
+-- named lists of routes ("To work": 1, 22, 30); route_ids is a JSON array of route ids
+CREATE TABLE IF NOT EXISTS route_collections (
+	id         TEXT PRIMARY KEY,
+	user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+	name       TEXT NOT NULL,
+	route_ids  TEXT NOT NULL,
+	created_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS route_collections_by_user ON route_collections(user_id);
 `
 
 // Open opens (creating it if needed) the database at path and applies the schema.
@@ -118,7 +129,7 @@ func (s *Store) Touch(ctx context.Context, userID string) error {
 func (s *Store) Places(ctx context.Context, userID string) ([]Place, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT id, kind, label, address, icon, lat, lng
-		FROM places WHERE user_id = ? ORDER BY created_at, id`, userID)
+		FROM places WHERE user_id = ? ORDER BY created_at, rowid`, userID)
 	if err != nil {
 		return nil, err
 	}

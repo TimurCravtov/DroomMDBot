@@ -68,6 +68,10 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/me/places", mine(s.listPlaces))
 	mux.Handle("POST /api/me/places", mine(s.savePlace))
 	mux.Handle("DELETE /api/me/places/{id}", mine(s.deletePlace))
+	mux.Handle("GET /api/me/collections", mine(s.listCollections))
+	mux.Handle("POST /api/me/collections", mine(s.saveCollection))
+	mux.Handle("PUT /api/me/collections/{id}", mine(s.updateCollection))
+	mux.Handle("DELETE /api/me/collections/{id}", mine(s.deleteCollection))
 	mux.Handle("DELETE /api/me", mine(s.deleteMe))
 	return s.withCORS(withLogging(mux))
 }
@@ -248,7 +252,7 @@ func cors(allowed string, next http.Handler) http.Handler {
 
 		if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" {
 			h := w.Header()
-			h.Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
+			h.Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 			h.Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
 			h.Set("Access-Control-Max-Age", "600")
 			w.WriteHeader(http.StatusNoContent)
