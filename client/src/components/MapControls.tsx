@@ -30,8 +30,15 @@ export function CompassButton() {
       className={roundButton}
       onClick={() => map?.easeTo({ bearing: 0 })}
     >
-      {/* Tabler's needle points north-east, hence the extra 45°. */}
-      <TbCompass className="h-6 w-6" style={{ transform: `rotate(${-bearing - 45}deg)` }} />
+      {/* The whole dial turns with the map, so the N stays on the side where north is. */}
+      <span
+        className="relative flex h-full w-full items-center justify-center"
+        style={{ transform: `rotate(${-bearing}deg)` }}
+      >
+        <span className="absolute top-0.5 text-[9px] font-bold leading-none">N</span>
+        {/* Tabler's needle points north-east, hence the extra 45°. */}
+        <TbCompass className="h-5 w-5 translate-y-0.5" style={{ transform: 'rotate(-45deg)' }} />
+      </span>
     </button>
   );
 }
