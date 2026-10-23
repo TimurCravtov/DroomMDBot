@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { TbMapPin, TbMapPinFilled, TbSearch, TbX } from 'react-icons/tb';
 import { useMap } from 'react-map-gl/maplibre';
 import type { GeocodeResult, PlaceKind } from '../api';
+import { useAboveKeyboard } from '../hooks/useAboveKeyboard';
 import { useLabels } from '../hooks/useLabels';
 import { useGeocode, useLocationInfo } from '../hooks/useTransport';
 import { useI18n } from '../i18n';
@@ -31,6 +32,9 @@ interface Props {
   onCancel: () => void;
 }
 
+/** The card's usual distance from the bottom of the screen: 7rem, above the map controls. */
+const REST_BOTTOM_PX = 112;
+
 /** Roughly how far (m) the pin may drift from a chosen address before it stops counting. */
 const ADDRESS_TOLERANCE_M = 30;
 
@@ -45,6 +49,10 @@ export function PickLocation({ purpose, onConfirm, onCancel }: Props) {
   const { t } = useI18n();
   const { describeLocation } = useLabels();
   const map = useMap()[MAP_ID];
+  const cardRef = useRef<HTMLDivElement>(null);
+  // True while a field of the card has focus, i.e. (on a phone) while the keyboard is up.
+  const [typing, setTyping] = useState(false);
+  const fit = useAboveKeyboard(cardRef, REST_BOTTOM_PX, typing);
   const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [name, setName] = useState('');
   const [icon, setIcon] = useState(DEFAULT_PLACE_ICON);
@@ -113,8 +121,20 @@ export function PickLocation({ purpose, onConfirm, onCancel }: Props) {
         </div>
       </div>
 
-      <div className="absolute bottom-[7rem] left-4 right-4 z-10 sm:right-auto sm:w-96">
-        <div className={`rounded-2xl p-4 shadow-lg ${surface}`}>
+      <div
+        ref={cardRef}
+        className="absolute left-4 right-4 z-40 sm:right-auto sm:w-96"
+        style={{ bottom: fit?.bottom ?? REST_BOTTOM_PX }}
+        // Only a phone shows a keyboard that covers the screen; on a desktop the card stays put.
+        onFocusCapture={() => setTyping(window.matchMedia('(pointer: coarse)').matches)}
+        onBlurCapture={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget)) setTyping(false);
+        }}
+      >
+        <div
+          className={`overflow-y-auto rounded-2xl p-4 shadow-lg ${surface}`}
+          style={{ maxHeight: fit?.maxHeight }}
+        >
           <p className="text-sm font-semibold">
             {info ? describeLocation(info) : t('common.locating')}
           </p>
@@ -128,20 +148,23 @@ export function PickLocation({ purpose, onConfirm, onCancel }: Props) {
           )}
 
           {canSearchAddress && (
-            <div className="relative mt-3">
-              <TbSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
-              <input
-                value={addressQuery}
-                placeholder={t('pick.addressSearch')}
-                className="w-full rounded-lg bg-ink-100 py-2 pl-9 pr-3 text-sm outline-none placeholder:text-ink-400 focus:ring-2 focus:ring-ink-400 dark:bg-ink-900"
-                onChange={(e) => {
-                  setAddressQuery(e.target.value);
-                  setSuggestionsOpen(true);
-                }}
-                onFocus={() => setSuggestionsOpen(true)}
-              />
+            <div className="mt-3">
+              <div className="relative">
+                <TbSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
+                <input
+                  value={addressQuery}
+                  placeholder={t('pick.addressSearch')}
+                  className="w-full rounded-lg bg-ink-100 py-2 pl-9 pr-3 text-sm outline-none placeholder:text-ink-400 focus:ring-2 focus:ring-ink-400 dark:bg-ink-900"
+                  onChange={(e) => {
+                    setAddressQuery(e.target.value);
+                    setSuggestionsOpen(true);
+                  }}
+                  onFocus={() => setSuggestionsOpen(true)}
+                />
+              </div>
               {suggestionsOpen && suggestions.length > 0 && (
-                <ul className={`absolute inset-x-0 bottom-full z-10 mb-1 overflow-hidden rounded-xl shadow-lg ${surface}`}>
+                // In the card's flow, so a long list scrolls instead of leaving the screen.
+                <ul className="mt-2 max-h-48 overflow-y-auto rounded-xl ring-1 ring-ink-200 dark:ring-ink-700">
                   {suggestions.map((s) => (
                     <li key={`${s.label}-${s.lat}-${s.lng}`}>
                       <button
