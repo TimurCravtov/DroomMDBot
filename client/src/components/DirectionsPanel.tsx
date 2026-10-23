@@ -9,6 +9,7 @@ import {
 } from 'react-icons/tb';
 import type { Itinerary, Leg, Place } from '../api';
 import { usePlan } from '../hooks/useTransport';
+import { useI18n, type Translate } from '../i18n';
 import type { Endpoint } from '../map/types';
 import { EndpointField } from './EndpointField';
 import { RouteNumber } from './RouteColors';
@@ -37,17 +38,47 @@ interface Props {
 
 const minutes = (seconds: number) => Math.max(1, Math.round(seconds / 60));
 
-function formatDuration(seconds: number): string {
-  const m = minutes(seconds);
-  return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60 ? `${m % 60} min` : ''}`.trim();
+/** How a trip is written out: "42 min", "1 h 5 min". Bound to the current language. */
+function useFormat() {
+  const { t, decimal, lower } = useI18n();
+  return {
+    t,
+    lower,
+    minutes,
+    duration(seconds: number): string {
+      const m = minutes(seconds);
+      if (m < 60) return t('time.min', { n: m });
+      const hours = t('time.hour', { h: Math.floor(m / 60) });
+      return m % 60 ? `${hours} ${t('time.min', { n: m % 60 })}` : hours;
+    },
+    distance(meters: number): string {
+      return meters < 1000
+        ? t('unit.m', { n: Math.round(meters / 10) * 10 })
+        : t('unit.km', { n: decimal(meters / 1000) });
+    },
+  };
 }
 
-function formatDistance(meters: number): string {
-  return meters < 1000 ? `${Math.round(meters / 10) * 10} m` : `${(meters / 1000).toFixed(1)} km`;
+type Format = ReturnType<typeof useFormat>;
+
+/** "direct", "on foot" or "2 changes". */
+function transfersText(t: Translate, itinerary: Itinerary): string {
+  if (itinerary.transfers > 0) return t('trip.changes', { count: itinerary.transfers });
+  return itinerary.legs.some((l) => l.mode === 'transit') ? t('trip.direct') : t('trip.onFoot');
+}
+
+/** "Next trolleybus 22 in about 5 min at Gara". */
+function nextRideText(f: Format, ride: Leg): string {
+  return f.t('trip.next', {
+    vehicle: `${f.lower(f.t(`type.${ride.type!}`))} ${ride.routeNumber}`,
+    time: f.t('time.min', { n: f.minutes(ride.waitS ?? 0) }),
+    stop: ride.from.name ?? '',
+  });
 }
 
 /** Walk and route icons in order: the shape of the journey at a glance. */
 function LegSummary({ legs }: { legs: Leg[] }) {
+  const f = useFormat();
   return (
     <div className="flex flex-wrap items-center gap-1">
       {legs.map((leg, i) => (
@@ -56,7 +87,7 @@ function LegSummary({ legs }: { legs: Leg[] }) {
           {leg.mode === 'walk' ? (
             <span className={`flex items-center text-xs ${mutedText}`}>
               <TbWalk className="h-4 w-4" />
-              {minutes(leg.durationS)}
+              {f.minutes(leg.durationS)}
             </span>
           ) : (
             <span className="flex items-center gap-1">
@@ -72,6 +103,8 @@ function LegSummary({ legs }: { legs: Leg[] }) {
 
 /** Step-by-step instructions for one itinerary. */
 function Steps({ legs, from, to }: { legs: Leg[]; from: string; to: string }) {
+  const f = useFormat();
+  const { t } = f;
   return (
     <ol className="mt-3 space-y-3 border-t border-ink-200 pt-3 text-sm dark:border-ink-700">
       {legs.map((leg, i) => {
@@ -89,22 +122,22 @@ function Steps({ legs, from, to }: { legs: Leg[]; from: string; to: string }) {
             <div className="min-w-0">
               {leg.mode === 'walk' ? (
                 <p>
-                  Walk {formatDistance(leg.distanceM)}{' '}
-                  <span className={mutedText}>· {minutes(leg.durationS)} min</span>
-                  <span className="block truncate">to {target}</span>
+                  {t('step.walk', { distance: f.distance(leg.distanceM) })}{' '}
+                  <span className={mutedText}>· {f.duration(leg.durationS)}</span>
+                  <span className="block truncate">{t('step.to', { place: target })}</span>
                 </p>
               ) : (
                 <p>
                   <span className="font-medium">
-                    {leg.type} {leg.routeNumber}
+                    {t(`type.${leg.type!}`)} {leg.routeNumber}
                   </span>{' '}
                   <span className={mutedText}>
-                    · {leg.stopCount} stop{leg.stopCount === 1 ? '' : 's'} · {minutes(leg.durationS)} min
+                    · {t('step.stops', { count: leg.stopCount ?? 0 })} · {f.duration(leg.durationS)}
                   </span>
-                  <span className="block truncate">from {origin}</span>
-                  <span className="block truncate">to {target}</span>
+                  <span className="block truncate">{t('step.from', { place: origin })}</span>
+                  <span className="block truncate">{t('step.to', { place: target })}</span>
                   <span className={`block text-xs ${mutedText}`}>
-                    Wait about {minutes(leg.waitS ?? 0)} min
+                    {t('step.wait', { time: t('time.min', { n: minutes(leg.waitS ?? 0) }) })}
                   </span>
                 </p>
               )}
@@ -133,6 +166,8 @@ export function DirectionsPanel({
   compact,
   onCompactChange,
 }: Props) {
+  const f = useFormat();
+  const { t } = f;
   const { data, loading, error } = usePlan(from, to);
   const [selected, setSelected] = useState(0);
   const [showSteps, setShowSteps] = useState(false);
@@ -165,8 +200,8 @@ export function DirectionsPanel({
         <div className={`rounded-2xl p-3 shadow-lg ${surface}`}>
           <div className="flex items-start gap-2">
             <button
-              aria-label="Back to the list of routes"
-              title="Other routes"
+              aria-label={t('directions.backToList')}
+              title={t('directions.otherRoutes')}
               className={closeButton}
               onClick={() => onCompactChange(false)}
             >
@@ -174,30 +209,23 @@ export function DirectionsPanel({
             </button>
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline gap-2">
-                <span className="text-lg font-semibold">{formatDuration(itinerary.durationS)}</span>
+                <span className="text-lg font-semibold">{f.duration(itinerary.durationS)}</span>
                 <span className={`text-xs ${mutedText}`}>
-                  {itinerary.walkM > 0 ? `${formatDistance(itinerary.walkM)} walk · ` : ''}
-                  {itinerary.transfers === 0
-                    ? firstRide
-                      ? 'direct'
-                      : 'on foot'
-                    : `${itinerary.transfers} change`}
+                  {itinerary.walkM > 0 ? `${t('trip.walk', { distance: f.distance(itinerary.walkM) })} · ` : ''}
+                  {transfersText(t, itinerary)}
                 </span>
               </div>
               <div className="mt-1">
                 <LegSummary legs={itinerary.legs} />
               </div>
               {firstRide && (
-                <p className={`mt-1 text-xs ${mutedText}`}>
-                  Next {firstRide.type} {firstRide.routeNumber} in about{' '}
-                  {minutes(firstRide.waitS ?? 0)} min at {firstRide.from.name}
-                </p>
+                <p className={`mt-1 text-xs ${mutedText}`}>{nextRideText(f, firstRide)}</p>
               )}
               <p className={`mt-0.5 truncate text-xs ${mutedText}`}>
                 {from.label} → {to.label}
               </p>
             </div>
-            <button aria-label="Close directions" className={closeButton} onClick={onClose}>
+            <button aria-label={t('directions.close')} className={closeButton} onClick={onClose}>
               <TbX className="h-5 w-5" />
             </button>
           </div>
@@ -207,7 +235,7 @@ export function DirectionsPanel({
             className={`mt-2 flex w-full items-center justify-center gap-1 rounded-lg py-1.5 text-xs font-medium ${hoverRow}`}
             onClick={() => setShowSteps((s) => !s)}
           >
-            {showSteps ? 'Hide steps' : 'Show steps'}
+            {showSteps ? t('directions.hideSteps') : t('directions.showSteps')}
             <TbChevronDown className={`h-4 w-4 transition-transform ${showSteps ? 'rotate-180' : ''}`} />
           </button>
           {showSteps && (
@@ -224,8 +252,8 @@ export function DirectionsPanel({
     <div className={`${placement} flex max-h-[calc(100vh-2rem)] flex-col`}>
       <div className={`relative z-10 rounded-2xl p-3 shadow-lg ${surface}`}>
         <div className="mb-2 flex items-center justify-between pl-1">
-          <h2 className="text-sm font-semibold">Directions</h2>
-          <button aria-label="Close directions" className={closeButton} onClick={onClose}>
+          <h2 className="text-sm font-semibold">{t('directions.title')}</h2>
+          <button aria-label={t('directions.close')} className={closeButton} onClick={onClose}>
             <TbX className="h-5 w-5" />
           </button>
         </div>
@@ -250,8 +278,8 @@ export function DirectionsPanel({
             />
           </div>
           <button
-            aria-label="Swap start and destination"
-            title="Swap"
+            aria-label={t('directions.swap')}
+            title={t('directions.swapTitle')}
             className={`rounded-full p-2 ${hoverRow}`}
             onClick={() => onChange({ from: to, to: from })}
           >
@@ -262,13 +290,15 @@ export function DirectionsPanel({
 
       {from && to && (
         <div className={`mt-2 min-h-0 overflow-y-auto rounded-2xl shadow-lg ${surface}`}>
-          {loading && !data && <p className={`px-4 py-4 text-sm ${mutedText}`}>Finding routes…</p>}
+          {loading && !data && <p className={`px-4 py-4 text-sm ${mutedText}`}>
+              {t('directions.finding')}
+            </p>}
           {error && !data && (
-            <p className="px-4 py-4 text-sm text-red-600">Couldn’t plan this trip. Try again.</p>
+            <p className="px-4 py-4 text-sm text-red-600">{t('directions.error')}</p>
           )}
           {data?.length === 0 && (
             <p className={`px-4 py-4 text-sm ${mutedText}`}>
-              No way found between these points. Try a spot closer to a stop.
+              {t('directions.none')}
             </p>
           )}
 
@@ -292,20 +322,17 @@ export function DirectionsPanel({
                   }}
                 >
                   <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-lg font-semibold">{formatDuration(it.durationS)}</span>
+                    <span className="text-lg font-semibold">{f.duration(it.durationS)}</span>
                     <span className={`text-xs ${mutedText}`}>
-                      {it.walkM > 0 ? `${formatDistance(it.walkM)} walk · ` : ''}
-                      {it.transfers === 0 ? (firstRide ? 'direct' : 'on foot') : `${it.transfers} change`}
+                      {it.walkM > 0 ? `${t('trip.walk', { distance: f.distance(it.walkM) })} · ` : ''}
+                      {transfersText(t, it)}
                     </span>
                   </div>
                   <div className="mt-1">
                     <LegSummary legs={it.legs} />
                   </div>
                   {firstRide && (
-                    <p className={`mt-1 text-xs ${mutedText}`}>
-                      Next {firstRide.type} {firstRide.routeNumber} in about {minutes(firstRide.waitS ?? 0)}{' '}
-                      min at {firstRide.from.name}
-                    </p>
+                    <p className={`mt-1 text-xs ${mutedText}`}>{nextRideText(f, firstRide)}</p>
                   )}
                 </button>
               </div>

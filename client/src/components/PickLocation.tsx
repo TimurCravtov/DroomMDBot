@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { TbMapPin, TbMapPinFilled, TbSearch, TbX } from 'react-icons/tb';
 import { useMap } from 'react-map-gl/maplibre';
 import type { GeocodeResult, PlaceKind } from '../api';
+import { useLabels } from '../hooks/useLabels';
 import { useGeocode, useLocationInfo } from '../hooks/useTransport';
+import { useI18n } from '../i18n';
 import { DEFAULT_PLACE_ICON, PLACE_ICONS, PLACE_ICON_KEYS } from './placeIcons';
 import { MAP_ID } from './TransitMap';
 import { closeButton, mutedText, surface } from './ui';
@@ -29,15 +31,6 @@ interface Props {
   onCancel: () => void;
 }
 
-const TITLES: Record<PickPurpose, string> = {
-  from: 'Choose starting point',
-  to: 'Choose destination',
-  home: 'Set your home',
-  work: 'Set your work',
-  custom: 'Add a place',
-  pin: 'Select on map',
-};
-
 /** Roughly how far (m) the pin may drift from a chosen address before it stops counting. */
 const ADDRESS_TOLERANCE_M = 30;
 
@@ -49,6 +42,8 @@ function approxDistanceMeters(a: { lat: number; lng: number }, b: { lat: number;
 
 /** Fixed pin in the middle of the screen; the user pans the map under it and confirms. */
 export function PickLocation({ purpose, onConfirm, onCancel }: Props) {
+  const { t } = useI18n();
+  const { describeLocation } = useLabels();
   const map = useMap()[MAP_ID];
   const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [name, setName] = useState('');
@@ -88,7 +83,13 @@ export function PickLocation({ purpose, onConfirm, onCancel }: Props) {
 
   const confirm = () => {
     if (!center) return;
-    onConfirm({ ...center, name, description: info?.label ?? 'Dropped pin', address, icon });
+    onConfirm({
+      ...center,
+      name,
+      description: info ? describeLocation(info) : t('place.dropped'),
+      address,
+      icon,
+    });
   };
 
   return (
@@ -103,10 +104,10 @@ export function PickLocation({ purpose, onConfirm, onCancel }: Props) {
           className={`pointer-events-auto flex items-center gap-3 rounded-full py-2 pl-5 pr-2 shadow-lg ${surface}`}
         >
           <div>
-            <h2 className="text-sm font-semibold">{TITLES[purpose]}</h2>
-            <p className={`text-xs ${mutedText}`}>Move the map to place the pin</p>
+            <h2 className="text-sm font-semibold">{t(`pick.${purpose}`)}</h2>
+            <p className={`text-xs ${mutedText}`}>{t('pick.hint')}</p>
           </div>
-          <button aria-label="Cancel" className={closeButton} onClick={onCancel}>
+          <button aria-label={t('common.cancel')} className={closeButton} onClick={onCancel}>
             <TbX className="h-5 w-5" />
           </button>
         </div>
@@ -114,10 +115,15 @@ export function PickLocation({ purpose, onConfirm, onCancel }: Props) {
 
       <div className="absolute bottom-[7rem] left-4 right-4 z-10 sm:right-auto sm:w-96">
         <div className={`rounded-2xl p-4 shadow-lg ${surface}`}>
-          <p className="text-sm font-semibold">{info?.label ?? 'Locating…'}</p>
+          <p className="text-sm font-semibold">
+            {info ? describeLocation(info) : t('common.locating')}
+          </p>
           {info?.nearestStop && (
             <p className={`mt-0.5 text-xs ${mutedText}`}>
-              Nearest stop: {info.nearestStop.name} · {info.distanceMeters} m
+              {t('pick.nearestStop', {
+                name: info.nearestStop.name,
+                distance: t('unit.m', { n: info.distanceMeters }),
+              })}
             </p>
           )}
 
@@ -126,7 +132,7 @@ export function PickLocation({ purpose, onConfirm, onCancel }: Props) {
               <TbSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
               <input
                 value={addressQuery}
-                placeholder="Search by address"
+                placeholder={t('pick.addressSearch')}
                 className="w-full rounded-lg bg-ink-100 py-2 pl-9 pr-3 text-sm outline-none placeholder:text-ink-400 focus:ring-2 focus:ring-ink-400 dark:bg-ink-900"
                 onChange={(e) => {
                   setAddressQuery(e.target.value);
@@ -160,16 +166,17 @@ export function PickLocation({ purpose, onConfirm, onCancel }: Props) {
           {purpose === 'custom' && (
             <input
               value={name}
-              placeholder="Name this place"
+              placeholder={t('pick.nameIt')}
               className="mt-3 w-full rounded-lg bg-ink-100 px-3 py-2 text-sm outline-none placeholder:text-ink-400 focus:ring-2 focus:ring-ink-400 dark:bg-ink-900"
               onChange={(e) => setName(e.target.value)}
             />
           )}
 
           {purpose === 'custom' && (
-            <div role="radiogroup" aria-label="Icon" className="mt-3 grid grid-cols-6 gap-1.5">
+            <div role="radiogroup" aria-label={t('pick.icon')} className="mt-3 grid grid-cols-6 gap-1.5">
               {PLACE_ICON_KEYS.map((key) => {
-                const { label, Icon } = PLACE_ICONS[key];
+                const Icon = PLACE_ICONS[key];
+                const label = t(`placeIcon.${key}`);
                 const selected = key === icon;
                 return (
                   <button
@@ -199,16 +206,16 @@ export function PickLocation({ purpose, onConfirm, onCancel }: Props) {
               onClick={confirm}
             >
               {purpose === 'pin'
-                ? 'Drop pin here'
+                ? t('pick.dropHere')
                 : purpose === 'from' || purpose === 'to'
-                  ? 'Use this point'
-                  : 'Save here'}
+                  ? t('pick.useThis')
+                  : t('pick.saveHere')}
             </button>
             <button
               className="rounded-full px-4 py-2 text-sm hover:bg-ink-100 dark:hover:bg-ink-700"
               onClick={onCancel}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
           </div>
         </div>

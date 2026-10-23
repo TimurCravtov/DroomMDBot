@@ -10,6 +10,8 @@ import {
   type MapLayerMouseEvent,
 } from 'react-map-gl/maplibre';
 import type { Itinerary, Place, Route, RoutePath, Stop, TransportType, Vehicle } from '../api';
+import { useLabels } from '../hooks/useLabels';
+import { useI18n } from '../i18n';
 import { MAP_STYLES, type MapStyleId } from '../map/mapStyles';
 import { directionColor, readableTextColor } from '../map/routeColors';
 import { provideVehicleArrows, VEHICLE_ARROW_PREFIX } from '../map/vehicleArrows';
@@ -177,6 +179,8 @@ export function TransitMap({
   onSelectPlace,
   onSelectVehicle,
 }: Props) {
+  const { t } = useI18n();
+  const { placeName } = useLabels();
   // Only the threshold crossing is stored, so panning and zooming don't re-render every frame.
   const [closeEnough, setCloseEnough] = useState(false);
   // Last settled viewport, used to render DOM markers only for vehicles that can be seen.
@@ -422,8 +426,8 @@ export function TransitMap({
         return (
           <Marker key={p.id} longitude={p.lng} latitude={p.lat} style={{ zIndex: focused ? 9 : 5 }}>
             <button
-              title={p.label}
-              aria-label={p.label}
+              title={placeName(p)}
+              aria-label={placeName(p)}
               onClick={() => onSelectPlace(p)}
               className={`flex items-center justify-center rounded-full bg-ink-900 text-white shadow-lg ring-2 ring-white dark:bg-white dark:text-ink-900 dark:ring-ink-900 ${
                 focused ? 'h-9 w-9' : 'h-7 w-7'
@@ -477,7 +481,7 @@ export function TransitMap({
           <Marker key={v.id} longitude={v.lng} latitude={v.lat} style={{ zIndex: 10 }}>
             <div className="relative">
               <button
-                title={`Show route ${route.number}${v.toward ? ` → ${v.toward}` : ''}`}
+                title={`${t('map.showRoute', { number: route.number })}${v.toward ? ` → ${v.toward}` : ''}`}
                 style={{ background: color, color: readableTextColor(color) }}
                 className="flex items-center gap-1 rounded-full border-2 border-white px-2 py-1 text-xs font-bold shadow-md"
                 onClick={(e) => {

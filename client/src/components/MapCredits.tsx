@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useI18n } from '../i18n';
 import { MAP_STYLES, type MapStyleId } from '../map/mapStyles';
 import { mutedText, roundButton, surface } from './ui';
 
@@ -21,6 +22,7 @@ const linkClass ='[&_a]:underline [&_a]:underline-offset-2';
  * being removed.
  */
 export function MapCredits({ mapStyleId }: Props) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -39,9 +41,9 @@ export function MapCredits({ mapStyleId }: Props) {
   return (
     <div ref={rootRef} className="absolute bottom-4 left-3 z-30">
       <button
-        aria-label="Map data and credits"
+        aria-label={t('credits.button')}
         aria-expanded={open}
-        title="Map data & credits"
+        title={t('credits.title')}
         className={`${roundButton} text-lg font-medium`}
         onClick={() => setOpen((o) => !o)}
       >
@@ -50,14 +52,14 @@ export function MapCredits({ mapStyleId }: Props) {
 
       {open && (
         <div className={`absolute bottom-12 left-0 w-72 rounded-2xl p-4 text-xs shadow-lg ${surface}`}>
-          <h2 className="mb-2 text-sm font-semibold">Map data &amp; credits</h2>
+          <h2 className="mb-2 text-sm font-semibold">{t('credits.title')}</h2>
           <dl className={`space-y-2 ${linkClass}`}>
             <div>
-              <dt className={mutedText}>Base map</dt>
+              <dt className={mutedText}>{t('credits.baseMap')}</dt>
               <dd dangerouslySetInnerHTML={{ __html: withBlankLinks(basemap) }} />
             </div>
             <div>
-              <dt className={mutedText}>Routes, stops and live vehicles</dt>
+              <dt className={mutedText}>{t('credits.transit')}</dt>
               <dd>
                 <a href="https://tranzy.ai/opendata/" target="_blank" rel="noreferrer">
                   Tranzy open data
@@ -66,7 +68,7 @@ export function MapCredits({ mapStyleId }: Props) {
               </dd>
             </div>
             <div>
-              <dt className={mutedText}>Addresses and places</dt>
+              <dt className={mutedText}>{t('credits.addresses')}</dt>
               <dd>
                 <a href="https://nominatim.org" target="_blank" rel="noreferrer">
                   Nominatim
@@ -78,7 +80,7 @@ export function MapCredits({ mapStyleId }: Props) {
               </dd>
             </div>
             <div>
-              <dt className={mutedText}>Walking routes</dt>
+              <dt className={mutedText}>{t('credits.walking')}</dt>
               <dd>
                 <a href="https://routing.openstreetmap.de" target="_blank" rel="noreferrer">
                   FOSSGIS routing
@@ -90,7 +92,7 @@ export function MapCredits({ mapStyleId }: Props) {
               </dd>
             </div>
             <div>
-              <dt className={mutedText}>Map library</dt>
+              <dt className={mutedText}>{t('credits.library')}</dt>
               <dd>
                 <a href="https://maplibre.org" target="_blank" rel="noreferrer">
                   MapLibre GL JS
@@ -98,7 +100,7 @@ export function MapCredits({ mapStyleId }: Props) {
               </dd>
             </div>
             <div>
-              <dt className={mutedText}>Source code</dt>
+              <dt className={mutedText}>{t('credits.source')}</dt>
               <dd>
                 <a href={REPO_URL} target="_blank" rel="noreferrer">
                   TimurCravtov/DroomMDBot

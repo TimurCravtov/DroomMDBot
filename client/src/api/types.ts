@@ -130,8 +130,6 @@ export interface GeocodeResult {
 }
 
 export interface LocationInfo {
-  /** Human-readable description of the point, e.g. "Near Piața Centrală". */
-  label: string;
   nearestStop: Stop | null;
   distanceMeters: number;
 }

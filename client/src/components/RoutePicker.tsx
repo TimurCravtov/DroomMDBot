@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { TbCheck, TbRoute, TbSearch, TbX } from 'react-icons/tb';
 import type { Route, RouteCollection, TransportType } from '../api';
+import { useI18n, type MessageKey } from '../i18n';
 import { FavouriteRoutes } from './FavouriteRoutes';
 import { RouteChecklistItems, toggleRoute } from './RouteChecklist';
 import { normalize, routeMatches } from './routeSearch';
@@ -22,9 +23,9 @@ interface Props {
 }
 
 type Tab = 'routes' | 'favourites';
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'routes', label: 'Routes' },
-  { id: 'favourites', label: 'Favourites' },
+const TABS: { id: Tab; label: MessageKey }[] = [
+  { id: 'routes', label: 'routes.tab.routes' },
+  { id: 'favourites', label: 'routes.tab.favourites' },
 ];
 
 /**
@@ -44,6 +45,7 @@ export function RoutePicker({
   onUpdateCollection,
   onDeleteCollection,
 }: Props) {
+  const { t } = useI18n();
   const [type, setType] = useState<TransportType | null>(null);
   const [tab, setTab] = useState<Tab>('routes');
   const [query, setQuery] = useState('');
@@ -68,9 +70,9 @@ export function RoutePicker({
   return (
     <div ref={rootRef} className="relative">
       <button
-        aria-label="Select routes"
+        aria-label={t('routes.open')}
         aria-expanded={open}
-        title="Routes"
+        title={t('routes.title')}
         className={roundButton}
         onClick={() => onOpenChange(!open)}
       >
@@ -90,20 +92,20 @@ export function RoutePicker({
             role="tablist"
             className="flex gap-1 border-b border-ink-200 p-2 dark:border-ink-700"
           >
-            {TABS.map((t) => (
+            {TABS.map((tabItem) => (
               <button
-                key={t.id}
+                key={tabItem.id}
                 role="tab"
-                aria-selected={tab === t.id}
-                onClick={() => setTab(t.id)}
+                aria-selected={tab === tabItem.id}
+                onClick={() => setTab(tabItem.id)}
                 className={`flex-1 rounded-full py-1.5 text-sm ${
-                  tab === t.id
+                  tab === tabItem.id
                     ? 'bg-ink-100 font-semibold dark:bg-ink-900'
                     : `${mutedText} ${hoverRow}`
                 }`}
               >
-                {t.label}
-                {t.id === 'favourites' && collections.length > 0 && (
+                {t(tabItem.label)}
+                {tabItem.id === 'favourites' && collections.length > 0 && (
                   <span className={`ml-1 text-xs font-normal ${mutedText}`}>
                     {collections.length}
                   </span>
@@ -139,13 +141,13 @@ export function RoutePicker({
                   type="search"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search routes"
-                  aria-label="Search routes"
+                  placeholder={t('routes.search')}
+                  aria-label={t('routes.search')}
                   className="min-w-0 flex-1 bg-transparent py-1 text-sm outline-none placeholder:text-ink-400 [&::-webkit-search-cancel-button]:hidden"
                 />
                 {query && (
                   <button
-                    aria-label="Clear search"
+                    aria-label={t('search.clear')}
                     className={closeButton}
                     onClick={() => setQuery('')}
                   >
@@ -164,7 +166,7 @@ export function RoutePicker({
                         onOpenChange(false);
                       }}
                     >
-                      <span className={noneSelected ? 'font-semibold' : ''}>All routes</span>
+                      <span className={noneSelected ? 'font-semibold' : ''}>{t('routes.all')}</span>
                       {noneSelected && <TbCheck className="h-4 w-4" />}
                     </button>
                   </li>
@@ -180,7 +182,7 @@ export function RoutePicker({
                 />
                 {visible.length === 0 && (
                   <li className={`px-4 py-3 text-sm ${mutedText}`}>
-                    {q ? 'No routes match your search.' : 'No routes of this type.'}
+                    {q ? t('routes.noMatch') : t('routes.noneOfType')}
                   </li>
                 )}
               </ul>

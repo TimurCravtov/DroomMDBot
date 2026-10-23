@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useI18n } from '../i18n';
 import { MAP_STYLES, type MapStyleId } from '../map/mapStyles';
 import { hoverRow, roundButton, surface } from './ui';
 import { TbCheck, TbStack2 } from 'react-icons/tb';
@@ -10,14 +11,15 @@ interface Props {
 
 /** Layers button that opens a small menu of base maps. */
 export function StyleSwitcher({ value, onChange }: Props) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
 
   return (
     <div className="relative">
       <button
-        aria-label="Change map style"
+        aria-label={t('map.styleChange')}
         aria-expanded={open}
-        title="Map style"
+        title={t('map.styleTitle')}
         className={roundButton}
         onClick={() => setOpen((o) => !o)}
       >
@@ -37,7 +39,7 @@ export function StyleSwitcher({ value, onChange }: Props) {
                   setOpen(false);
                 }}
               >
-                {s.label}
+                {t(`mapStyle.${s.id}`)}
                 {s.id === value && <TbCheck aria-hidden className="h-4 w-4" />}
               </button>
             </li>

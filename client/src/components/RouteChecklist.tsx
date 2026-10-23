@@ -1,5 +1,6 @@
 import { TbCheck } from 'react-icons/tb';
 import type { Route } from '../api';
+import { useI18n } from '../i18n';
 import { RouteNumber } from './RouteColors';
 import { TypeBadge } from './TypeBadge';
 import { hoverRow } from './ui';
@@ -31,6 +32,7 @@ export function RouteChecklistItems({
   onPick,
   onToggle,
 }: Props) {
+  const { t } = useI18n();
   const padding = roomy ? 'py-3' : 'py-2.5';
   return (
     <>
@@ -57,7 +59,7 @@ export function RouteChecklistItems({
               <button
                 role="checkbox"
                 aria-checked={checked}
-                aria-label={`Select route ${r.number}`}
+                aria-label={t('routes.select', { number: r.number })}
                 className={`flex items-center px-4 ${hoverRow}`}
                 onClick={() => onToggle(r.id)}
               >

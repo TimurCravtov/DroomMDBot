@@ -4,7 +4,6 @@ export type MapStyleId = 'streets' | 'light' | 'dark' | 'satellite' | 'topo';
 
 export interface MapStyleOption {
   id: MapStyleId;
-  label: string;
   style: StyleSpecification;
 }
 
@@ -31,22 +30,18 @@ const cartoTiles = (name: string) =>
 const ALL_MAP_STYLES: MapStyleOption[] = [
   {
     id: 'streets',
-    label: 'Streets',
     style: rasterStyle(['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], OSM_ATTRIBUTION),
   },
   {
     id: 'light',
-    label: 'Light',
     style: rasterStyle(cartoTiles('light_all'), CARTO_ATTRIBUTION, 20),
   },
   {
     id: 'dark',
-    label: 'Dark',
     style: rasterStyle(cartoTiles('dark_all'), CARTO_ATTRIBUTION, 20),
   },
   {
     id: 'satellite',
-    label: 'Satellite',
     style: rasterStyle(
       ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
       'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
@@ -54,7 +49,6 @@ const ALL_MAP_STYLES: MapStyleOption[] = [
   },
   {
     id: 'topo',
-    label: 'Terrain',
     style: rasterStyle(
       ['a', 'b', 'c'].map((s) => `https://${s}.tile.opentopomap.org/{z}/{x}/{y}.png`),
       `${OSM_ATTRIBUTION}, <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)`,

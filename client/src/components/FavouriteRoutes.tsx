@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { TbCheck, TbPencil, TbSearch, TbStar, TbTrash, TbX } from 'react-icons/tb';
 import type { Route, RouteCollection } from '../api';
+import { useI18n } from '../i18n';
 import { RouteNumber } from './RouteColors';
 import { collectionMatches } from './routeSearch';
 import { closeButton, hoverRow, mutedText } from './ui';
@@ -35,6 +36,7 @@ export function FavouriteRoutes({
   onUpdate,
   onDelete,
 }: Props) {
+  const { t } = useI18n();
   const [name, setName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +55,7 @@ export function FavouriteRoutes({
       await action();
       return true;
     } catch {
-      setError('Could not save. Try again.');
+      setError(t('fav.saveError'));
       return false;
     }
   };
@@ -69,7 +71,7 @@ export function FavouriteRoutes({
       <form
         onSubmit={submit}
         className="border-b border-ink-200 p-2 dark:border-ink-700"
-        aria-label="Save selected routes as a favourite"
+        aria-label={t('fav.form')}
       >
         <div className="flex gap-2">
           <input
@@ -77,7 +79,7 @@ export function FavouriteRoutes({
             maxLength={MAX_NAME}
             onChange={(e) => setName(e.target.value)}
             placeholder={
-              selectedRouteIds.length > 0 ? 'Name, e.g. To work' : 'Select routes to save them'
+              selectedRouteIds.length > 0 ? t('fav.namePlaceholder') : t('fav.selectToSave')
             }
             disabled={selectedRouteIds.length === 0}
             className="min-w-0 flex-1 rounded-full bg-ink-100 px-3 py-1.5 text-sm outline-none placeholder:text-ink-400 disabled:opacity-60 dark:bg-ink-900"
@@ -88,7 +90,9 @@ export function FavouriteRoutes({
             className="flex items-center gap-1 rounded-full bg-ink-900 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-40 dark:bg-white dark:text-ink-900"
           >
             <TbStar className="h-4 w-4" />
-            Save{selectedRouteIds.length > 0 && ` (${selectedRouteIds.length})`}
+            {selectedRouteIds.length > 0
+              ? t('fav.saveCount', { count: selectedRouteIds.length })
+              : t('common.save')}
           </button>
         </div>
         {error && (
@@ -105,12 +109,16 @@ export function FavouriteRoutes({
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search favourites"
-            aria-label="Search favourites"
+            placeholder={t('fav.search')}
+            aria-label={t('fav.search')}
             className="min-w-0 flex-1 bg-transparent py-1 text-sm outline-none placeholder:text-ink-400 [&::-webkit-search-cancel-button]:hidden"
           />
           {query && (
-            <button aria-label="Clear search" className={closeButton} onClick={() => setQuery('')}>
+            <button
+              aria-label={t('search.clear')}
+              className={closeButton}
+              onClick={() => setQuery('')}
+            >
               <TbX className="h-4 w-4" />
             </button>
           )}
@@ -119,11 +127,11 @@ export function FavouriteRoutes({
 
       <ul className="min-h-0 flex-1 overflow-y-auto py-1">
         {collections.length > 0 && shown.length === 0 && (
-          <li className={`px-4 py-3 text-sm ${mutedText}`}>No favourites match your search.</li>
+          <li className={`px-4 py-3 text-sm ${mutedText}`}>{t('fav.noMatch')}</li>
         )}
         {collections.length === 0 && (
           <li className={`px-4 py-3 text-sm ${mutedText}`}>
-            No favourites yet. Pick some routes on the Routes tab, then save them here under a name.
+            {t('fav.empty')}
           </li>
         )}
         {shown.map((c) =>
@@ -166,6 +174,7 @@ function CollectionRow({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useI18n();
   // Routes the feed no longer has are skipped rather than shown as blanks.
   const present = collection.routeIds.map((id) => known.get(id)).filter((r): r is Route => !!r);
 
@@ -185,22 +194,22 @@ function CollectionRow({
             <span className={`self-center text-xs ${mutedText}`}>+{present.length - PREVIEW}</span>
           )}
           {present.length === 0 && (
-            <span className={`text-xs ${mutedText}`}>These routes are no longer available.</span>
+            <span className={`text-xs ${mutedText}`}>{t('fav.gone')}</span>
           )}
         </span>
       </button>
       <div className="flex items-center gap-0.5 pr-2">
         <button
-          aria-label={`Edit ${collection.name}`}
-          title="Edit"
+          aria-label={t('fav.editName', { name: collection.name })}
+          title={t('fav.edit')}
           className={closeButton}
           onClick={onEdit}
         >
           <TbPencil className="h-4 w-4" />
         </button>
         <button
-          aria-label={`Delete ${collection.name}`}
-          title="Delete"
+          aria-label={t('fav.deleteName', { name: collection.name })}
+          title={t('fav.delete')}
           className={closeButton}
           onClick={onDelete}
         >
@@ -223,6 +232,7 @@ function EditRow({
   onSave: (collection: RouteCollection) => Promise<void>;
   onCancel: () => void;
 }) {
+  const { t } = useI18n();
   const [name, setName] = useState(collection.name);
   const [routeIds, setRouteIds] = useState(collection.routeIds);
   const usingSelection = routeIds === selectedRouteIds;
@@ -233,7 +243,7 @@ function EditRow({
         autoFocus
         value={name}
         maxLength={MAX_NAME}
-        aria-label="Collection name"
+        aria-label={t('fav.collectionName')}
         onChange={(e) => setName(e.target.value)}
         className="w-full rounded-full bg-white px-3 py-1.5 text-sm outline-none ring-1 ring-ink-200 dark:bg-ink-800 dark:ring-ink-700"
       />
@@ -245,16 +255,21 @@ function EditRow({
           onClick={() => setRouteIds(selectedRouteIds)}
         >
           {usingSelection
-            ? `Using ${selectedRouteIds.length} selected`
-            : `Use selected routes (${selectedRouteIds.length})`}
+            ? t('fav.using', { count: selectedRouteIds.length })
+            : t('fav.useSelected', { count: selectedRouteIds.length })}
         </button>
         <span className="flex-1" />
-        <button aria-label="Cancel" title="Cancel" className={closeButton} onClick={onCancel}>
+        <button
+          aria-label={t('common.cancel')}
+          title={t('common.cancel')}
+          className={closeButton}
+          onClick={onCancel}
+        >
           <TbX className="h-4 w-4" />
         </button>
         <button
-          aria-label="Save changes"
-          title="Save"
+          aria-label={t('fav.saveChanges')}
+          title={t('common.save')}
           disabled={name.trim() === '' || routeIds.length === 0}
           className={`${closeButton} disabled:opacity-40`}
           onClick={() => void onSave({ ...collection, name: name.trim(), routeIds })}

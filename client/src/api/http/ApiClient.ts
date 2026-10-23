@@ -237,7 +237,6 @@ export class ApiClient implements TransportClient {
       }
     }
     return {
-      label: nearestStop ? `Near ${nearestStop.name}` : 'Chișinău',
       nearestStop,
       distanceMeters: Number.isFinite(best) ? Math.round(best) : 0,
     };

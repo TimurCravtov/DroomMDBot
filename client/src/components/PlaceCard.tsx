@@ -1,6 +1,8 @@
 import { TbBus, TbDirections, TbTrash, TbX } from 'react-icons/tb';
 import type { Place, Stop } from '../api';
+import { useLabels } from '../hooks/useLabels';
 import { useLocationInfo } from '../hooks/useTransport';
+import { useI18n } from '../i18n';
 import { PlaceIcon } from './PlaceIcon';
 import { closeButton, hoverRow, mutedText, surface } from './ui';
 
@@ -16,6 +18,8 @@ interface Props {
 
 /** Details of the focused place, with a shortcut to the nearest stop's arrivals. */
 export function PlaceCard({ place, onClose, onRemove, onShowStop, onDirections }: Props) {
+  const { t } = useI18n();
+  const { describeLocation, placeName } = useLabels();
   const info = useLocationInfo(place);
 
   return (
@@ -23,10 +27,11 @@ export function PlaceCard({ place, onClose, onRemove, onShowStop, onDirections }
       <div className="flex items-start gap-3">
         <PlaceIcon kind={place.kind} icon={place.icon} className="mt-0.5 h-5 w-5 shrink-0" />
         <div className="min-w-0 flex-1">
-          <h2 className="text-base font-semibold leading-tight">{place.label}</h2>
-          <p className={`text-xs ${mutedText}`}>{place.address ?? info?.label ?? 'Locating…'}</p>
+          <h2 className="text-base font-semibold leading-tight">{placeName(place)}</h2>
+          <p className={`text-xs ${mutedText}`}>{place.address ?? (info ? describeLocation(info) : t('common.locating'))}
+          </p>
         </div>
-        <button aria-label="Close" className={closeButton} onClick={onClose}>
+        <button aria-label={t('common.close')} className={closeButton} onClick={onClose}>
           <TbX className="h-5 w-5" />
         </button>
       </div>
@@ -37,7 +42,7 @@ export function PlaceCard({ place, onClose, onRemove, onShowStop, onDirections }
           onClick={onDirections}
         >
           <TbDirections className="h-5 w-5" />
-          Directions
+          {t('directions.title')}
         </button>
         {info?.nearestStop && (
           <button
@@ -46,9 +51,11 @@ export function PlaceCard({ place, onClose, onRemove, onShowStop, onDirections }
           >
             <TbBus className="h-5 w-5 shrink-0" />
             <span className="min-w-0 flex-1 truncate">
-              Arrivals at {info.nearestStop.name}
+              {t('place.arrivalsAt', { stop: info.nearestStop.name })}
             </span>
-            <span className={`text-xs ${mutedText}`}>{info.distanceMeters} m</span>
+            <span className={`text-xs ${mutedText}`}>
+              {t('unit.m', { n: info.distanceMeters })}
+            </span>
           </button>
         )}
         {onRemove && (
@@ -57,7 +64,7 @@ export function PlaceCard({ place, onClose, onRemove, onShowStop, onDirections }
             onClick={onRemove}
           >
             <TbTrash className="h-5 w-5 shrink-0" />
-            Remove from saved places
+            {t('place.remove')}
           </button>
         )}
       </div>

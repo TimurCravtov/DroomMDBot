@@ -235,7 +235,6 @@ export class MockEasyWayClient implements TransportClient {
       }
     }
     return this.respond({
-      label: nearestStop ? `Near ${nearestStop.name}` : 'Chișinău',
       nearestStop,
       distanceMeters: Math.round(best),
     });

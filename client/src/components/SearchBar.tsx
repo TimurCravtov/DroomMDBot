@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { TbArrowLeft, TbChevronRight, TbDirections, TbMap2, TbMapPin, TbPlus, TbSearch, TbX } from 'react-icons/tb';
 import type { GeocodeResult, Place, Route, StopSearchResult, TransportType } from '../api';
+import { useLabels } from '../hooks/useLabels';
 import { useGeocode, useSearch } from '../hooks/useTransport';
+import { useI18n } from '../i18n';
 import { PlaceIcon } from './PlaceIcon';
 import { RouteChecklistItems } from './RouteChecklist';
 import { RouteNumber } from './RouteColors';
 import { ScrollRow } from './ScrollRow';
-import { TypeBadge, TYPE_LABEL } from './TypeBadge';
+import { TypeBadge } from './TypeBadge';
 import { TypeFilter } from './TypeFilter';
 import { closeButton, hoverRow, mutedText, surface } from './ui';
 
@@ -96,6 +98,8 @@ export function SearchBar({
   onSelectLocation,
   onShortcut,
 }: Props) {
+  const { t, lower } = useI18n();
+  const { placeName } = useLabels();
   const [query, setQuery] = useState('');
   const [type, setType] = useState<TransportType | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -160,7 +164,7 @@ export function SearchBar({
           {expanded ? (
             <button
               type="button"
-              aria-label="Close search"
+              aria-label={t('search.close')}
               className={closeButton}
               onClick={close}
             >
@@ -172,7 +176,7 @@ export function SearchBar({
           <input
             ref={inputRef}
             value={query}
-            placeholder="Search stops, routes or places"
+            placeholder={t('search.placeholder')}
             className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-ink-400"
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => onExpandedChange(true)}
@@ -189,7 +193,7 @@ export function SearchBar({
           {expanded && hasQuery && (
             <button
               type="button"
-              aria-label="Clear search"
+              aria-label={t('search.clear')}
               className={closeButton}
               onClick={() => {
                 setQuery('');
@@ -205,19 +209,19 @@ export function SearchBar({
           <ScrollRow className="-mx-1 px-1 pb-2 pt-2">
             <Chip
               icon={<TbDirections className="h-4 w-4" />}
-              label="Directions"
+              label={t('directions.title')}
               onClick={() => pick(() => onShortcut('directions'))}
             />
             <Chip
               icon={<PlaceIcon kind="home" className="h-4 w-4" />}
-              label="Home"
-              hint={home ? undefined : 'Set'}
+              label={t('place.home')}
+              hint={home ? undefined : t('shortcut.set')}
               onClick={() => pick(() => (home ? onSelectPlace(home) : onShortcut('home')))}
             />
             <Chip
               icon={<PlaceIcon kind="work" className="h-4 w-4" />}
-              label="Work"
-              hint={work ? undefined : 'Set'}
+              label={t('place.work')}
+              hint={work ? undefined : t('shortcut.set')}
               onClick={() => pick(() => (work ? onSelectPlace(work) : onShortcut('work')))}
             />
             {customPlaces.map((p) => (
@@ -230,12 +234,12 @@ export function SearchBar({
             ))}
             <Chip
               icon={<TbPlus className="h-4 w-4" />}
-              label="Add a place"
+              label={t('shortcut.add')}
               onClick={() => pick(() => onShortcut('add'))}
             />
             <Chip
               icon={<TbMap2 className="h-4 w-4" />}
-              label="Select on map"
+              label={t('shortcut.map')}
               onClick={() => pick(() => onShortcut('map'))}
             />
           </ScrollRow>
@@ -244,13 +248,15 @@ export function SearchBar({
         {expanded && !hasQuery && suggested.length > 0 && (
           <div className={`mt-1 overflow-hidden rounded-2xl shadow-lg ${surface}`}>
             <div className="flex items-center justify-between px-4 pb-1 pt-3">
-              <h2 className={`text-xs font-medium uppercase tracking-wide ${mutedText}`}>Routes</h2>
+              <h2 className={`text-xs font-medium uppercase tracking-wide ${mutedText}`}>
+                {t('section.routes')}
+              </h2>
               {selectedRouteIds.length > 0 && (
                 <button
                   className={`text-xs underline-offset-2 hover:underline ${mutedText}`}
                   onClick={() => onRoutesChange([])}
                 >
-                  Clear ({selectedRouteIds.length})
+                  {t('search.clearCount', { count: selectedRouteIds.length })}
                 </button>
               )}
             </div>
@@ -268,7 +274,7 @@ export function SearchBar({
                 className={`flex flex-1 items-center justify-center gap-1 py-2.5 text-sm font-medium ${hoverRow}`}
                 onClick={() => pick(onViewMoreRoutes)}
               >
-                View more routes
+                {t('search.viewMore')}
                 <TbChevronRight className="h-4 w-4" />
               </button>
             </div>
@@ -283,10 +289,12 @@ export function SearchBar({
         inert={!showResults}
       >
         <div className="mx-auto max-w-2xl px-4 pb-8">
-          {!data && loading && <p className={`px-4 py-6 text-sm ${mutedText}`}>Searching…</p>}
+          {!data && loading && <p className={`px-4 py-6 text-sm ${mutedText}`}>{t('search.searching')}</p>}
 
           {data && allRoutes.length + stops.length + foundPlaces.length + locations.length === 0 && (
-            <p className={`px-4 py-6 text-sm ${mutedText}`}>No results for “{query.trim()}”.</p>
+            <p className={`px-4 py-6 text-sm ${mutedText}`}>
+              {t('search.noResults', { query: query.trim() })}
+            </p>
           )}
 
           {allRoutes.length > 0 && (
@@ -301,12 +309,12 @@ export function SearchBar({
 
           {allRoutes.length > 0 && routes.length === 0 && type && (
             <p className={`px-4 py-3 text-sm ${mutedText}`}>
-              No {TYPE_LABEL[type].toLowerCase()} routes match “{query.trim()}”.
+              {t('search.noTypeMatch', { type: lower(t(`type.${type}`)), query: query.trim() })}
             </p>
           )}
 
           {foundPlaces.length > 0 && (
-            <Section title={`Places · ${foundPlaces.length}`}>
+            <Section title={`${t('section.places')} · ${foundPlaces.length}`}>
               {foundPlaces.map((p) => (
                 <li key={p.id}>
                   <button
@@ -314,7 +322,7 @@ export function SearchBar({
                     onClick={() => pick(() => onSelectPlace(p))}
                   >
                     <PlaceIcon kind={p.kind} icon={p.icon} className="h-5 w-5 shrink-0 text-ink-400" />
-                    <span className="truncate text-sm font-medium">{p.label}</span>
+                    <span className="truncate text-sm font-medium">{placeName(p)}</span>
                   </button>
                 </li>
               ))}
@@ -322,7 +330,7 @@ export function SearchBar({
           )}
 
           {routes.length > 0 && (
-            <Section title={`Routes · ${routes.length}`}>
+            <Section title={`${t('section.routes')} · ${routes.length}`}>
               {routes.map((r) => (
                 <li key={r.id}>
                   <button
@@ -339,7 +347,7 @@ export function SearchBar({
           )}
 
           {locations.length > 0 && (
-            <Section title={`Addresses and places · ${locations.length}`}>
+            <Section title={`${t('section.addresses')} · ${locations.length}`}>
               {locations.map((l) => (
                 <li key={`${l.label}-${l.lat}-${l.lng}`}>
                   <button
@@ -360,7 +368,7 @@ export function SearchBar({
           )}
 
           {stops.length > 0 && (
-            <Section title={`Stops · ${stops.length}`}>
+            <Section title={`${t('section.stops')} · ${stops.length}`}>
               {stops.map((s) => (
                 <li key={s.id}>
                   <button
@@ -371,7 +379,7 @@ export function SearchBar({
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium">{s.name}</span>
                       <span className={`block truncate text-xs ${mutedText}`}>
-                        Routes {s.routeNumbers.join(', ')}
+                        {t('stop.routes', { numbers: s.routeNumbers.join(', ') })}
                       </span>
                     </span>
                   </button>

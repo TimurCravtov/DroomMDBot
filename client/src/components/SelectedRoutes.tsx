@@ -1,5 +1,6 @@
 import { TbArrowNarrowRight, TbX } from 'react-icons/tb';
 import type { Route, RoutePath } from '../api';
+import { useI18n } from '../i18n';
 import { directionColor } from '../map/routeColors';
 import { RouteNumber, useRouteColor } from './RouteColors';
 import { TypeBadge, TypeIcon } from './TypeBadge';
@@ -15,6 +16,7 @@ interface Props {
 
 /** Chips for the routes currently shown on the map. A lone route gets its full details. */
 export function SelectedRoutes({ routes, routePaths, onRemove, onClear }: Props) {
+  const { t } = useI18n();
   const single = routes.length === 1;
 
   return (
@@ -37,7 +39,7 @@ export function SelectedRoutes({ routes, routePaths, onRemove, onClear }: Props)
             </>
           )}
           <button
-            aria-label={`Hide route ${r.number}`}
+            aria-label={t('routes.hide', { number: r.number })}
             className={closeButton}
             onClick={() => onRemove(r.id)}
           >
@@ -51,7 +53,7 @@ export function SelectedRoutes({ routes, routePaths, onRemove, onClear }: Props)
           className={`rounded-full px-3 py-1.5 text-sm shadow-lg ${surface} ${mutedText}`}
           onClick={onClear}
         >
-          Clear all
+          {t('routes.clearAll')}
         </button>
       )}
     </div>
@@ -60,6 +62,7 @@ export function SelectedRoutes({ routes, routePaths, onRemove, onClear }: Props)
 
 /** Where each direction of a route leads, in the shade its vehicles and line are drawn in. */
 function DirectionLegend({ route, paths }: { route: Route; paths: RoutePath[] }) {
+  const { t } = useI18n();
   const color = useRouteColor(route.id, route.type);
   // A direction can have several shapes; list each destination once.
   const seen = new Set<string>();
@@ -77,7 +80,7 @@ function DirectionLegend({ route, paths }: { route: Route; paths: RoutePath[] })
       {entries.map((p) => (
         <span
           key={`${p.direction}|${p.toward}`}
-          title={p.direction === 'back' ? 'The way back' : 'Forward'}
+          title={p.direction === 'back' ? t('direction.back') : t('direction.forward')}
           className={`flex max-w-full items-center gap-1.5 rounded-full px-3 py-1 text-xs shadow-lg ${surface}`}
         >
           <span

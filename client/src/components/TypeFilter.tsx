@@ -1,5 +1,6 @@
 import type { TransportType } from '../api';
-import { TypeIcon, TYPE_LABEL } from './TypeBadge';
+import { useI18n } from '../i18n';
+import { TypeIcon } from './TypeBadge';
 import { hoverRow, mutedText } from './ui';
 
 export const TRANSPORT_TYPES: TransportType[] = ['trolleybus', 'bus', 'minibus'];
@@ -15,26 +16,27 @@ interface Props {
 
 /** Row of "All / trolleybus / bus / minibus" toggle pills. */
 export function TypeFilter({ value, onChange, available, showLabels = false, className = '' }: Props) {
+  const { t } = useI18n();
   return (
-    <div role="group" aria-label="Vehicle type" className={`flex gap-1.5 ${className}`}>
-      {[null, ...TRANSPORT_TYPES].map((t) => {
-        const disabled = t !== null && available !== undefined && !available.has(t);
+    <div role="group" aria-label={t('filter.vehicleType')} className={`flex gap-1.5 ${className}`}>
+      {[null, ...TRANSPORT_TYPES].map((type) => {
+        const disabled = type !== null && available !== undefined && !available.has(type);
         return (
           <button
-            key={t ?? 'all'}
+            key={type ?? 'all'}
             type="button"
-            aria-pressed={t === value}
+            aria-pressed={type === value}
             disabled={disabled}
-            title={t ? TYPE_LABEL[t] : 'All types'}
-            onClick={() => onChange(t)}
+            title={type ? t(`type.${type}`) : t('filter.allTypes')}
+            onClick={() => onChange(type)}
             className={`flex flex-1 items-center justify-center gap-1.5 rounded-full py-1.5 text-sm disabled:opacity-40 ${
-              t === value
+              type === value
                 ? 'bg-ink-900 font-semibold text-white dark:bg-white dark:text-ink-900'
                 : `${mutedText} ${disabled ? '' : hoverRow}`
             }`}
           >
-            {t ? <TypeIcon type={t} className="h-5 w-5" /> : 'All'}
-            {t && showLabels && <span>{TYPE_LABEL[t]}</span>}
+            {type ? <TypeIcon type={type} className="h-5 w-5" /> : t('filter.all')}
+            {type && showLabels && <span>{t(`type.${type}`)}</span>}
           </button>
         );
       })}

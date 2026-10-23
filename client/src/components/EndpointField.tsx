@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { TbCircle, TbCurrentLocation, TbMap2, TbMapPin } from 'react-icons/tb';
 import type { Place } from '../api';
+import { useLabels } from '../hooks/useLabels';
 import { useGeocode, useSearch } from '../hooks/useTransport';
+import { useI18n } from '../i18n';
 import type { Endpoint } from '../map/types';
 import { PlaceIcon } from './PlaceIcon';
 import { hoverRow, mutedText, surface } from './ui';
@@ -59,6 +61,8 @@ export function EndpointField({
   onUseMyLocation,
   onPickOnMap,
 }: Props) {
+  const { t } = useI18n();
+  const { placeName } = useLabels();
   const [editing, setEditing] = useState(false);
   const [query, setQuery] = useState('');
   const [locationError, setLocationError] = useState(false);
@@ -79,7 +83,7 @@ export function EndpointField({
     finish();
   };
   const choosePlace = (p: Place) =>
-    choose({ label: p.label, lat: p.lat, lng: p.lng, kind: 'place' });
+    choose({ label: placeName(p), lat: p.lat, lng: p.lng, kind: 'place' });
 
   // The menu closes at once; the lookup can take seconds, so the field says so meanwhile.
   const useMyLocation = () => {
@@ -112,9 +116,9 @@ export function EndpointField({
         )}
         <input
           ref={inputRef}
-          value={editing ? query : locating && !value ? 'Locating…' : (value?.label ?? '')}
-          placeholder={role === 'from' ? 'Choose starting point' : 'Choose destination'}
-          aria-label={role === 'from' ? 'From' : 'To'}
+          value={editing ? query : locating && !value ? t('common.locating') : (value?.label ?? '')}
+          placeholder={role === 'from' ? t('pick.from') : t('pick.to')}
+          aria-label={role === 'from' ? t('endpoint.from') : t('endpoint.to')}
           className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-ink-400"
           onFocus={() => {
             setEditing(true);
@@ -128,7 +132,7 @@ export function EndpointField({
 
       {locationError && !editing && (
         <p className="mt-1 px-1 text-xs text-red-600">
-          Location unavailable — check your browser's permissions.
+          {t('endpoint.locationError')}
         </p>
       )}
 
@@ -139,7 +143,7 @@ export function EndpointField({
           {!hasQuery && (
             <Option
               icon={<TbCurrentLocation className="h-5 w-5" />}
-              title="My location"
+              title={t('place.myLocation')}
               onChoose={useMyLocation}
             />
           )}
@@ -148,7 +152,7 @@ export function EndpointField({
             <Option
               key={p.id}
               icon={<PlaceIcon kind={p.kind} icon={p.icon} />}
-              title={p.label}
+              title={placeName(p)}
               detail={p.address}
               onChoose={() => choosePlace(p)}
             />
@@ -159,7 +163,7 @@ export function EndpointField({
               key={s.id}
               icon={<TbMapPin className="h-5 w-5" />}
               title={s.name}
-              detail={`Stop · routes ${s.routeNumbers.slice(0, 6).join(', ')}`}
+              detail={t('endpoint.stopDetail', { numbers: s.routeNumbers.slice(0, 6).join(', ') })}
               onChoose={() => choose({ label: s.name, lat: s.lat, lng: s.lng, kind: 'stop' })}
             />
           ))}
@@ -176,7 +180,7 @@ export function EndpointField({
 
           <Option
             icon={<TbMap2 className="h-5 w-5" />}
-            title="Choose on map"
+            title={t('endpoint.chooseOnMap')}
             onChoose={() => {
               finish();
               onPickOnMap();

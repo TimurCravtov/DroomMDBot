@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { TbChevronLeft, TbChevronRight } from 'react-icons/tb';
+import { useI18n } from '../i18n';
 import { surface, hoverRow } from './ui';
 
 /** Share of the visible width one arrow click scrolls by. */
@@ -17,6 +18,7 @@ export function ScrollRow({
   children: ReactNode;
   className?: string;
 }) {
+  const { t } = useI18n();
   const scroller = useRef<HTMLDivElement>(null);
   const [more, setMore] = useState({ left: false, right: false });
 
@@ -50,7 +52,7 @@ export function ScrollRow({
     return (
       <button
         type="button"
-        aria-label={direction < 0 ? 'Scroll left' : 'Scroll right'}
+        aria-label={direction < 0 ? t('scroll.left') : t('scroll.right')}
         className={`absolute top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full shadow-lg ${surface} ${hoverRow} ${
           direction < 0 ? 'left-0' : 'right-0'
         }`}

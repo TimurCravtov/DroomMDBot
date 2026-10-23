@@ -13,6 +13,7 @@ import { SettingsMenu } from './components/SettingsMenu';
 import { StyleSwitcher } from './components/StyleSwitcher';
 import { TransitMap } from './components/TransitMap';
 import { useTheme } from './hooks/useTheme';
+import { useI18n } from './i18n';
 import {
   useArrivals,
   useCollections,
@@ -28,6 +29,7 @@ import { getCurrentLocation } from './map/geolocation';
 import type { Endpoint, UserLocation } from './map/types';
 
 export function App() {
+  const { t } = useI18n();
   const { data: routes = [] } = useRoutes();
   const { data: stops = [] } = useStops();
   const [routeIds, setRouteIds] = useState<string[]>([]);
@@ -86,7 +88,7 @@ export function App() {
   const myLocationEndpoint = async (): Promise<Endpoint> => {
     const location = await getCurrentLocation();
     setUserLocation(location);
-    return { label: 'My location', lat: location.lat, lng: location.lng, kind: 'me' };
+    return { label: t('place.myLocation'), lat: location.lat, lng: location.lng, kind: 'me' };
   };
 
   const openDirections = (ends: { from?: Endpoint; to?: Endpoint }) => {
@@ -128,14 +130,14 @@ export function App() {
       return;
     }
     if (purpose === 'pin') {
-      focusPlace({ id: 'pin', kind: 'pin', label: 'Dropped pin', lat, lng });
+      focusPlace({ id: 'pin', kind: 'pin', label: t('place.dropped'), lat, lng });
       return;
     }
     const label =
       purpose === 'home'
-        ? 'Home'
+        ? t('place.home')
         : purpose === 'work'
-          ? 'Work'
+          ? t('place.work')
           : picked.name.trim() || picked.address || picked.description;
     focusPlace(
       await savePlace({

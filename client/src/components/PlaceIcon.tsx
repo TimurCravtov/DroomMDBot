@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react';
 import { TbBookmark, TbBriefcase, TbHome, TbMapPin } from 'react-icons/tb';
 import type { PlaceKind } from '../api';
-import { PLACE_ICONS } from './placeIcons';
+import { PLACE_ICONS, type PlaceIconKey } from './placeIcons';
 
 const KIND_ICONS: Record<PlaceKind, ComponentType<{ className?: string }>> = {
   home: TbHome,
@@ -20,11 +20,11 @@ export function PlaceIcon({
   className = 'h-5 w-5',
 }: {
   kind: PlaceKind;
-  /** Key from PLACE_ICONS; only custom places use it. */
+  /** Key from PLACE_ICONS (stored, so possibly unknown); only custom places use it. */
   icon?: string;
   className?: string;
 }) {
-  const chosen = kind === 'custom' && icon ? PLACE_ICONS[icon]?.Icon : undefined;
+  const chosen = kind === 'custom' && icon ? PLACE_ICONS[icon as PlaceIconKey] : undefined;
   const Icon = chosen ?? KIND_ICONS[kind];
   return <Icon className={className} />;
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMap } from 'react-map-gl/maplibre';
+import { useI18n } from '../i18n';
 import { getCurrentLocation } from '../map/geolocation';
 import type { UserLocation } from '../map/types';
 import { MAP_ID } from './TransitMap';
@@ -10,6 +11,7 @@ import { TbCompass, TbCurrentLocation, TbMinus, TbPlus } from 'react-icons/tb';
 
 /** Compass whose needle follows the map's rotation; click to snap back to north. */
 export function CompassButton() {
+  const { t } = useI18n();
   const map = useMap()[MAP_ID];
   const [bearing, setBearing] = useState(0);
 
@@ -25,8 +27,8 @@ export function CompassButton() {
 
   return (
     <button
-      aria-label="Reset map to north"
-      title="Reset to north"
+      aria-label={t('map.resetNorth')}
+      title={t('map.resetNorthTitle')}
       className={roundButton}
       onClick={() => map?.easeTo({ bearing: 0 })}
     >
@@ -35,7 +37,9 @@ export function CompassButton() {
         className="relative flex h-full w-full items-center justify-center"
         style={{ transform: `rotate(${-bearing}deg)` }}
       >
-        <span className="absolute top-0.5 text-[9px] font-bold leading-none">N</span>
+        <span className="absolute top-0.5 text-[9px] font-bold leading-none">
+          {t('map.northLetter')}
+        </span>
         {/* Tabler's needle points north-east, hence the extra 45°. */}
         <TbCompass className="h-5 w-5 translate-y-0.5" style={{ transform: 'rotate(-45deg)' }} />
       </span>
@@ -47,6 +51,7 @@ type LocateStatus = 'idle' | 'locating' | 'denied';
 
 /** Centers the map on the user's current position. */
 export function LocateButton({ onLocated }: { onLocated: (location: UserLocation) => void }) {
+  const { t } = useI18n();
   const map = useMap()[MAP_ID];
   const [status, setStatus] = useState<LocateStatus>('idle');
 
@@ -66,10 +71,8 @@ export function LocateButton({ onLocated }: { onLocated: (location: UserLocation
 
   return (
     <button
-      aria-label="Show my location"
-      title={
-        status === 'denied' ? 'Location unavailable — check browser permissions' : 'Show my location'
-      }
+      aria-label={t('map.locate')}
+      title={status === 'denied' ? t('map.locateDenied') : t('map.locate')}
       className={`${roundButton} ${status === 'denied' ? '!text-red-500' : ''} ${
         status === 'locating' ? 'animate-pulse' : ''
       }`}
@@ -82,16 +85,17 @@ export function LocateButton({ onLocated }: { onLocated: (location: UserLocation
 
 /** Horizontal − / + pill. */
 export function ZoomButtons() {
+  const { t } = useI18n();
   const map = useMap()[MAP_ID];
   const half = `flex h-10 w-10 items-center justify-center text-xl ${hoverRow}`;
 
   return (
     <div className={`flex overflow-hidden rounded-full shadow-lg ${surface}`}>
-      <button aria-label="Zoom out" className={half} onClick={() => map?.zoomOut()}>
+      <button aria-label={t('map.zoomOut')} className={half} onClick={() => map?.zoomOut()}>
         <TbMinus className="h-5 w-5" />
       </button>
       <button
-        aria-label="Zoom in"
+        aria-label={t('map.zoomIn')}
         className={`${half} border-l border-ink-200 dark:border-ink-700`}
         onClick={() => map?.zoomIn()}
       >
