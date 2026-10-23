@@ -285,6 +285,12 @@ export function App() {
               stop={selectedStop}
               arrivals={arrivals}
               error={error}
+              selectedRouteIds={routeIds}
+              // Only this route, so the map isn't left holding what was shown before;
+              // tapping the route that is already alone on the map hides it again.
+              onSelectRoute={(id) =>
+                setRouteIds((ids) => (ids.length === 1 && ids[0] === id ? [] : [id]))
+              }
               onClose={() => setStopId(null)}
             />
           </div>
