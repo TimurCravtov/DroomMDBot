@@ -49,6 +49,8 @@ export function LocateButton({ onLocated }: { onLocated: (location: UserLocation
     getCurrentLocation()
       .then((location) => {
         onLocated(location);
+        // Straight to the user, whatever else was moving the map.
+        map.stop();
         map.flyTo({ center: [location.lng, location.lat], zoom: Math.max(map.getZoom(), 16) });
         setStatus('idle');
       })
