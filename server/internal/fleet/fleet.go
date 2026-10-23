@@ -95,6 +95,15 @@ func (f *Fleet) refresh(ctx context.Context, up *tranzy.Client, ds *transit.Data
 		if v.TripID != nil {
 			lv.TripID = *v.TripID
 		}
+		_, headingKnown := f.headings[id]
+		o := ds.DirectionOf(lv, headingKnown)
+		lv.Direction, lv.Toward = o.Direction, o.Toward
+		switch {
+		case o.OnRoute:
+			lv.Heading, lv.HasHeading = o.Bearing, true
+		case headingKnown:
+			lv.HasHeading = true // keeps the heading derived from its movement
+		}
 		live = append(live, lv)
 	}
 

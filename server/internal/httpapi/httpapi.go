@@ -127,12 +127,13 @@ func (s *Server) routeShapes(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "unknown route")
 		return
 	}
-	paths := ds.RouteShapes[id]
+	paths, directions := ds.RouteShapes[id], ds.RouteShapeInfo[id]
 	if paths == nil {
-		paths = [][][2]float64{}
+		paths, directions = [][][2]float64{}, []transit.PathInfo{}
 	}
 	cacheStatic(w)
-	writeJSON(w, http.StatusOK, map[string]any{"paths": paths})
+	// directions[i] describes paths[i].
+	writeJSON(w, http.StatusOK, map[string]any{"paths": paths, "directions": directions})
 }
 
 func (s *Server) arrivals(w http.ResponseWriter, r *http.Request) {

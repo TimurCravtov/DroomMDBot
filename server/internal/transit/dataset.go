@@ -19,6 +19,9 @@ type trip struct {
 	line        *geo.Polyline
 	stopOffsets map[string]float64 // stop id -> meters along the shape
 
+	direction string // DirectionForward or DirectionBack
+	toward    string // destination: the trip's headsign, else its last stop
+
 	stops  []string  // stop ids in travel order
 	dist   []float64 // meters travelled at each stop, non-decreasing
 	shaped bool      // dist is measured along line, so line can draw the way between stops
@@ -33,8 +36,11 @@ type Dataset struct {
 	StopsByID  map[string]*Stop
 	// RouteShapes lists the drawable paths of each route, as [lng, lat] pairs.
 	RouteShapes map[string][][][2]float64
+	// RouteShapeInfo describes each path of RouteShapes, in the same order.
+	RouteShapeInfo map[string][]PathInfo
 
-	trips map[string]*trip
+	trips      map[string]*trip
+	routeTrips map[string][]*trip
 	// stopRefs lists every trip stopping at a stop, and where in its sequence.
 	stopRefs map[string][]stopRef
 	// grid buckets stop indices by map cell for nearby-stop lookups.
@@ -87,11 +93,12 @@ func Load(ctx context.Context, up *tranzy.Client) (*Dataset, error) {
 	}
 
 	ds := &Dataset{
-		RoutesByID:  make(map[string]*Route, len(routes)),
-		StopsByID:   make(map[string]*Stop, len(stops)),
-		RouteShapes: make(map[string][][][2]float64, len(routes)),
-		trips:       make(map[string]*trip, len(trips)),
-		stopRoutes:  make(map[string][]string),
+		RoutesByID:     make(map[string]*Route, len(routes)),
+		StopsByID:      make(map[string]*Stop, len(stops)),
+		RouteShapes:    make(map[string][][][2]float64, len(routes)),
+		RouteShapeInfo: make(map[string][]PathInfo, len(routes)),
+		trips:          make(map[string]*trip, len(trips)),
+		stopRoutes:     make(map[string][]string),
 	}
 
 	ds.Stops = make([]Stop, 0, len(stops))
@@ -140,8 +147,14 @@ func Load(ctx context.Context, up *tranzy.Client) (*Dataset, error) {
 	seenShape := make(map[string]map[string]bool) // route id -> shape ids already emitted
 	for _, t := range trips {
 		routeID := strconv.Itoa(t.RouteID)
-		tr := &trip{id: t.TripID, routeID: routeID}
+		tr := &trip{id: t.TripID, routeID: routeID, direction: DirectionForward, toward: t.Headsign}
+		if t.DirectionID != 0 {
+			tr.direction = DirectionBack
+		}
 		tr.stops = knownStops(ds, tripStops[t.TripID])
+		if tr.toward == "" && len(tr.stops) > 0 {
+			tr.toward = ds.StopsByID[tr.stops[len(tr.stops)-1]].Name
+		}
 		if pts := shapes[t.ShapeID]; len(pts) >= 2 {
 			tr.line = geo.NewPolyline(pts)
 			tr.stopOffsets = placeStops(ds, tr.line, tripStops[t.TripID])
@@ -156,12 +169,15 @@ func Load(ctx context.Context, up *tranzy.Client) (*Dataset, error) {
 					path[i] = [2]float64{p.Lng, p.Lat}
 				}
 				ds.RouteShapes[routeID] = append(ds.RouteShapes[routeID], path)
+				ds.RouteShapeInfo[routeID] = append(ds.RouteShapeInfo[routeID], PathInfo{Direction: tr.direction, Toward: tr.toward})
 			}
 		}
 		tr.dist, tr.shaped = stopDistances(ds, tr.line, tr.stops)
 		ds.trips[t.TripID] = tr
 		routeTrips[routeID] = append(routeTrips[routeID], tr)
 	}
+
+	ds.routeTrips = routeTrips
 
 	// Routes, with their stops in travel order (first direction, then new stops of the other).
 	numbersAt := make(map[string]map[string]bool)

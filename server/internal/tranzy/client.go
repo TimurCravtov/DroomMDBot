@@ -31,6 +31,7 @@ type Trip struct {
 	RouteID     int    `json:"route_id"`
 	TripID      string `json:"trip_id"`
 	DirectionID int    `json:"direction_id"`
+	Headsign    string `json:"trip_headsign"`
 	ShapeID     string `json:"shape_id"`
 }
 

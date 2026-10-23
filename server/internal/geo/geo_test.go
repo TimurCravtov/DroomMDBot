@@ -79,3 +79,14 @@ func TestSliceCoversRequestedStretch(t *testing.T) {
 		t.Error("out-of-range bounds should clamp to the line's ends")
 	}
 }
+
+func TestBearingAtFollowsTheLine(t *testing.T) {
+	// East for ~1 km, then north.
+	l := NewPolyline([]Point{{Lat: 47, Lng: 28.80}, {Lat: 47, Lng: 28.8132}, {Lat: 47.01, Lng: 28.8132}})
+	if b := l.BearingAt(300); b < 89 || b > 91 {
+		t.Errorf("bearing on the eastbound part = %.1f, want ~90", b)
+	}
+	if b := l.BearingAt(l.Length() - 300); b > 1 && b < 359 {
+		t.Errorf("bearing on the northbound part = %.1f, want ~0", b)
+	}
+}

@@ -83,6 +83,12 @@ func (l *Polyline) Project(p Point, fromSeg int) (offset, dist float64, seg int)
 	return offset, best, seg
 }
 
+// BearingAt is the direction of travel along the line at d meters from its start,
+// in degrees clockwise from north.
+func (l *Polyline) BearingAt(d float64) float64 {
+	return Bearing(l.pointAt(d-5), l.pointAt(d+5))
+}
+
 // pointAt returns the point d meters along the line (clamped to its ends).
 func (l *Polyline) pointAt(d float64) Point {
 	n := len(l.pts)
