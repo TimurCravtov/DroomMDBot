@@ -212,7 +212,12 @@ export function App() {
         </div>
 
         <div className={`absolute left-4 top-4 z-[1000] ${hideWhenSearching}`}>
-          <SettingsMenu theme={theme} onThemeChange={setTheme} />
+          <SettingsMenu
+            theme={theme}
+            onThemeChange={setTheme}
+            mapStyleId={mapStyleId}
+            onMapStyleChange={changeMapStyle}
+          />
         </div>
 
         <div className={`absolute right-4 top-4 z-[1000] flex gap-2 ${hideWhenSearching}`}>
