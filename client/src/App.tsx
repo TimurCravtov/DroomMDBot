@@ -250,6 +250,7 @@ export function App() {
             <div className="pointer-events-auto max-w-full">
               <SelectedRoutes
                 routes={selectedRoutes}
+                routePaths={routePaths}
                 onRemove={(id) => setRouteIds((ids) => ids.filter((x) => x !== id))}
                 onClear={() => setRouteIds([])}
               />

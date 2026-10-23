@@ -10,6 +10,7 @@ import type {
   Place,
   Route,
   RouteCollection,
+  RoutePath,
   SearchResults,
   Stop,
   TransportType,
@@ -146,11 +147,13 @@ export class MockEasyWayClient implements TransportClient {
     return this.respond([]);
   }
 
-  getRoutePaths(routeId: string): Promise<LngLat[][]> {
+  getRoutePaths(routeId: string): Promise<RoutePath[]> {
     const route = MOCK_ROUTES.find((r) => r.id === routeId);
     if (!route) return this.respond([]);
     const loop = buildLoop(route.stopIds.map((id) => this.stopById(id)));
-    return this.respond([loop.points.map((p): LngLat => [p.lng, p.lat])]);
+    return this.respond([
+      { points: loop.points.map((p): LngLat => [p.lng, p.lat]), direction: 'forward' },
+    ]);
   }
 
   search(query: string): Promise<SearchResults> {
@@ -261,6 +264,7 @@ export class MockEasyWayClient implements TransportClient {
           lat,
           lng,
           heading,
+          hasHeading: true,
           speedKmh: Math.round(v.speedMs * 3.6),
           updatedAt: now,
         };

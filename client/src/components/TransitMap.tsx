@@ -9,11 +9,13 @@ import {
   useMap,
   type MapLayerMouseEvent,
 } from 'react-map-gl/maplibre';
-import type { Itinerary, Place, Route, Stop, TransportType, Vehicle } from '../api';
+import type { Itinerary, Place, Route, RoutePath, Stop, TransportType, Vehicle } from '../api';
 import { MAP_STYLES, type MapStyleId } from '../map/mapStyles';
-import { readableTextColor } from '../map/routeColors';
+import { directionColor, readableTextColor } from '../map/routeColors';
+import { provideVehicleArrows, VEHICLE_ARROW_PREFIX } from '../map/vehicleArrows';
 import type { UserLocation } from '../map/types';
-import { TbMapPinFilled } from 'react-icons/tb';
+import { TbArrowNarrowRight, TbMapPinFilled } from 'react-icons/tb';
+import { HeadingArrow } from './HeadingArrow';
 import { PlaceIcon } from './PlaceIcon';
 import { useRouteColors } from './RouteColors';
 import { TypeIcon } from './TypeBadge';
@@ -38,6 +40,8 @@ const STOPS_MIN_ZOOM = 13.5;
 
 const STOPS_LAYER = 'stops';
 const VEHICLE_LAYER = 'vehicle-dots';
+const VEHICLE_ARROW_LAYER = 'vehicle-arrows';
+const VEHICLE_LAYERS = [VEHICLE_LAYER, VEHICLE_ARROW_LAYER];
 
 interface Props {
   stops: Stop[];
@@ -53,14 +57,25 @@ interface Props {
   directionsCompact: boolean;
   /** These routes are drawn (using `routePaths`) and framed. */
   selectedRoutes: Route[];
-  /** Drawable paths per route id, as [lng, lat] lists; routes still loading are absent. */
-  routePaths: Record<string, LngLat[][]>;
+  /** Drawable paths per route id, with the way each runs; routes still loading are absent. */
+  routePaths: Record<string, RoutePath[]>;
   userLocation: UserLocation | null;
   mapStyleId: MapStyleId;
   onSelectStop: (stopId: string) => void;
   onSelectPlace: (place: Place) => void;
   /** Called when a vehicle (dot or pill) is clicked. */
   onSelectVehicle: (vehicle: Vehicle) => void;
+}
+
+/** Keeps the map supplied with the arrow images the vehicle layer draws. */
+function VehicleArrowImages({ colors }: { colors: string[] }) {
+  const { current: map } = useMap(); // the map this component is rendered in
+  const key = colors.join(',');
+  useEffect(
+    () => (map ? provideVehicleArrows(map.getMap(), key ? key.split(',') : []) : undefined),
+    [map, key],
+  );
+  return null;
 }
 
 /** Moves the viewport when the selected stop, place or routes change. */
@@ -197,7 +212,11 @@ export function TransitMap({
             properties: {
               type: route.type satisfies TransportType,
               vehicleId: v.id,
-              color: routeColors[route.id] ?? TYPE_COLOR[route.type],
+              // The way back is a slightly lighter shade of the route's color.
+              color: directionColor(routeColors[route.id] ?? TYPE_COLOR[route.type], v.direction),
+              // Vehicles with a known direction of travel are drawn as an arrow, not a dot.
+              oriented: v.hasHeading === true,
+              heading: v.heading,
             },
             geometry: { type: 'Point' as const, coordinates: [v.lng, v.lat] as LngLat },
           },
@@ -207,8 +226,14 @@ export function TransitMap({
     [vehicles, routesById, routeColors],
   );
 
+  // The arrow images the vehicle layer needs: one per color in use.
+  const arrowColors = useMemo(
+    () => [...new Set(vehiclesGeoJson.features.map((f) => f.properties.color))].sort(),
+    [vehiclesGeoJson],
+  );
+
   const drawnRoutes = selectedRoutes.filter((r) => routePaths[r.id]?.length);
-  const routePoints = drawnRoutes.flatMap((r) => routePaths[r.id].flat());
+  const routePoints = drawnRoutes.flatMap((r) => routePaths[r.id].flatMap((p) => p.points));
   const routesKey = drawnRoutes.map((r) => r.id).join(',');
 
   const itineraryPoints = itinerary?.legs.flatMap((l) => l.path) ?? [];
@@ -240,7 +265,7 @@ export function TransitMap({
     // Features come top-most first, so a vehicle wins over the stop underneath it.
     const feature = e.features?.[0];
     if (!feature) return;
-    if (feature.layer.id === VEHICLE_LAYER) {
+    if (VEHICLE_LAYERS.includes(feature.layer.id)) {
       const vehicle = vehicles.find((v) => v.id === String(feature.properties.vehicleId));
       if (vehicle) onSelectVehicle(vehicle);
     } else if (feature.properties.id !== undefined) {
@@ -256,7 +281,7 @@ export function TransitMap({
       maxPitch={0}
       // Credits live in <MapCredits>: a tiny © that opens the full list.
       attributionControl={false}
-      interactiveLayerIds={[STOPS_LAYER, VEHICLE_LAYER]}
+      interactiveLayerIds={[STOPS_LAYER, ...VEHICLE_LAYERS]}
       cursor={overStop ? 'pointer' : undefined}
       onMouseEnter={() => setOverStop(true)}
       onMouseLeave={() => setOverStop(false)}
@@ -266,6 +291,7 @@ export function TransitMap({
       onZoom={(e) => setCloseEnough(e.viewState.zoom >= VEHICLE_DETAIL_ZOOM)}
       style={{ width: '100%', height: '100%' }}
     >
+      <VehicleArrowImages colors={arrowColors} />
       <ViewController
         selectedStop={selectedStop}
         focusedPlace={focusedPlace}
@@ -282,9 +308,13 @@ export function TransitMap({
           id={`route-${route.id}`}
           type="geojson"
           data={{
-            type: 'Feature',
-            properties: {},
-            geometry: { type: 'MultiLineString', coordinates: routePaths[route.id] },
+            type: 'FeatureCollection',
+            // One feature per direction, so the way back can be a slightly different shade.
+            features: routePaths[route.id].map((p) => ({
+              type: 'Feature' as const,
+              properties: { color: directionColor(colorOf(route), p.direction) },
+              geometry: { type: 'LineString' as const, coordinates: p.points },
+            })),
           }}
         >
           <Layer
@@ -292,7 +322,7 @@ export function TransitMap({
             type="line"
             layout={{ 'line-cap': 'round', 'line-join': 'round' }}
             paint={{
-              'line-color': colorOf(route),
+              'line-color': ['get', 'color'],
               'line-width': 4,
               'line-opacity': 0.6,
             }}
@@ -407,11 +437,27 @@ export function TransitMap({
 
       {userLocation && <UserLocationMarker location={userLocation} />}
 
-      {/* Far away: plain colored dots, drawn by the map itself. */}
+      {/* Far away, drawn by the map itself: an arrow in the route's color pointing the way the
+          vehicle travels, or a plain dot when that isn't known (e.g. it is parked). */}
       <Source id="vehicles" type="geojson" data={vehiclesGeoJson}>
+        <Layer
+          id={VEHICLE_ARROW_LAYER}
+          type="symbol"
+          filter={['==', ['get', 'oriented'], true]}
+          layout={{
+            visibility: closeEnough ? 'none' : 'visible',
+            'icon-image': ['concat', VEHICLE_ARROW_PREFIX, ['get', 'color']],
+            'icon-rotate': ['get', 'heading'],
+            'icon-rotation-alignment': 'map',
+            'icon-size': 0.8,
+            'icon-allow-overlap': true,
+            'icon-ignore-placement': true,
+          }}
+        />
         <Layer
           id={VEHICLE_LAYER}
           type="circle"
+          filter={['!=', ['get', 'oriented'], true]}
           layout={{ visibility: closeEnough ? 'none' : 'visible' }}
           paint={{
             'circle-radius': 5.5,
@@ -426,20 +472,24 @@ export function TransitMap({
       {(closeEnough ? inView : []).map((v) => {
         const route = routesById.get(v.routeId);
         if (!route) return null;
+        const color = directionColor(colorOf(route), v.direction);
         return (
           <Marker key={v.id} longitude={v.lng} latitude={v.lat} style={{ zIndex: 10 }}>
-            <button
-              title={`Show route ${route.number}`}
-              style={{ background: colorOf(route), color: readableTextColor(colorOf(route)) }}
-              className="flex items-center gap-1 rounded-full border-2 border-white px-2 py-1 text-xs font-bold shadow-md"
-              onClick={(e) => {
-                e.stopPropagation(); // don't also click the map underneath
-                onSelectVehicle(v);
-              }}
-            >
-              <TypeIcon type={route.type} className="h-4 w-4" />
-              {route.number}
-            </button>
+            <div className="relative">
+              <button
+                title={`Show route ${route.number}${v.toward ? ` → ${v.toward}` : ''}`}
+                style={{ background: color, color: readableTextColor(color) }}
+                className="flex items-center gap-1 rounded-full border-2 border-white px-2 py-1 text-xs font-bold shadow-md"
+                onClick={(e) => {
+                  e.stopPropagation(); // don't also click the map underneath
+                  onSelectVehicle(v);
+                }}
+              >
+                <TypeIcon type={route.type} className="h-4 w-4" />
+                {route.number}
+              </button>
+              {v.hasHeading && <HeadingArrow heading={v.heading} color={color} />}
+            </div>
           </Marker>
         );
       })}
@@ -453,8 +503,14 @@ export function TransitMap({
           offset={[0, closeEnough ? 16 : 8]}
           style={{ zIndex: 11, pointerEvents: 'none' }}
         >
-          <span className="rounded bg-white/90 px-1 text-[10px] font-medium leading-4 text-ink-900 shadow dark:bg-ink-800/90 dark:text-white">
-            {v.label}
+          <span className="flex max-w-40 items-center gap-1 rounded bg-white/90 px-1 text-[10px] font-medium leading-4 text-ink-900 shadow dark:bg-ink-800/90 dark:text-white">
+            <span className="shrink-0">{v.label}</span>
+            {v.toward && (
+              <>
+                <TbArrowNarrowRight className="h-3 w-3 shrink-0" />
+                <span className="truncate font-normal">{v.toward}</span>
+              </>
+            )}
           </span>
         </Marker>
       ))}

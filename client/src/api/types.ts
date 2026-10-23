@@ -19,6 +19,17 @@ export interface Route {
   stopIds: string[];
 }
 
+/** The two ways a route runs: its first direction, and the way back. */
+export type RouteDirection = 'forward' | 'back';
+
+/** One drawable path of a route, with the way it runs. */
+export interface RoutePath {
+  points: LngLat[];
+  direction?: RouteDirection;
+  /** Where the route is heading along this path, e.g. "str. Bariera Sculeni". */
+  toward?: string;
+}
+
 export interface Vehicle {
   id: string;
   /** Board number painted on the vehicle, e.g. "3878". */
@@ -26,11 +37,17 @@ export interface Vehicle {
   routeId: string;
   lat: number;
   lng: number;
-  /** Degrees clockwise from north, 0-359. */
+  /** Direction of travel in degrees clockwise from north, 0-359: along the route when known. */
   heading: number;
+  /** Whether `heading` means anything; a parked vehicle has none. */
+  hasHeading?: boolean;
   speedKmh: number;
   /** Unix ms of the last position fix. */
   updatedAt: number;
+  /** Which way along its route the vehicle runs; absent when unknown. */
+  direction?: RouteDirection;
+  /** Where the vehicle is heading, e.g. "str. Bariera Sculeni". */
+  toward?: string;
 }
 
 export interface Arrival {

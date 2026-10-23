@@ -3,7 +3,7 @@ import type {
   Arrival,
   GeocodeResult,
   Itinerary,
-  LngLat,
+  RoutePath,
   LocationInfo,
   NewPlace,
   NewRouteCollection,
@@ -25,7 +25,7 @@ export interface TransportClient {
   getRoutes(): Promise<Route[]>;
   getArrivals(stopId: string): Promise<Arrival[]>;
   /** Drawable paths of a route, one per direction. */
-  getRoutePaths(routeId: string): Promise<LngLat[][]>;
+  getRoutePaths(routeId: string): Promise<RoutePath[]>;
   /** Finds routes (by number or name), stops and saved places (by name). */
   search(query: string): Promise<SearchResults>;
   getSavedPlaces(): Promise<Place[]>;

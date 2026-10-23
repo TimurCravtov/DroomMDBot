@@ -12,6 +12,8 @@ import type {
   Place,
   Route,
   RouteCollection,
+  RoutePath,
+  RouteDirection,
   SearchResults,
   Stop,
   Unsubscribe,
@@ -50,7 +52,7 @@ class HttpError extends Error {
 export class ApiClient implements TransportClient {
   private stops?: Promise<Stop[]>;
   private routes?: Promise<Route[]>;
-  private readonly paths = new Map<string, Promise<LngLat[][]>>();
+  private readonly paths = new Map<string, Promise<RoutePath[]>>();
 
   constructor(
     private readonly baseUrl: string,
@@ -74,11 +76,21 @@ export class ApiClient implements TransportClient {
     return this.routes;
   }
 
-  getRoutePaths(routeId: string): Promise<LngLat[][]> {
+  getRoutePaths(routeId: string): Promise<RoutePath[]> {
     let paths = this.paths.get(routeId);
     if (!paths) {
-      paths = this.json<{ paths: LngLat[][] }>(`/routes/${encodeURIComponent(routeId)}/shapes`)
-        .then((r) => r.paths)
+      paths = this.json<{
+        paths: LngLat[][];
+        /** directions[i] describes paths[i]. */
+        directions?: { direction: RouteDirection; toward?: string }[];
+      }>(`/routes/${encodeURIComponent(routeId)}/shapes`)
+        .then((r) =>
+          r.paths.map((points, i) => ({
+            points,
+            direction: r.directions?.[i]?.direction,
+            toward: r.directions?.[i]?.toward,
+          })),
+        )
         .catch((e) => {
           this.paths.delete(routeId);
           throw e;

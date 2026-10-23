@@ -5,13 +5,13 @@ import type {
   Arrival,
   GeocodeResult,
   Itinerary,
-  LngLat,
   LocationInfo,
   NewPlace,
   NewRouteCollection,
   Place,
   Route,
   RouteCollection,
+  RoutePath,
   SearchResults,
   Stop,
   Vehicle,
@@ -243,9 +243,9 @@ export function useGeocode(query: string, debounceMs = 200): GeocodeResult[] {
  * Drawable paths for the given routes, keyed by route id. Each route is fetched once
  * (the client caches static data); routes still loading are simply absent.
  */
-export function useRoutePaths(routeIds: readonly string[]): Record<string, LngLat[][]> {
+export function useRoutePaths(routeIds: readonly string[]): Record<string, RoutePath[]> {
   const client = useTransportClient();
-  const [paths, setPaths] = useState<Record<string, LngLat[][]>>({});
+  const [paths, setPaths] = useState<Record<string, RoutePath[]>>({});
   const requested = useRef(new Set<string>());
 
   useEffect(() => {

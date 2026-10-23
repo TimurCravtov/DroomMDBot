@@ -1,4 +1,4 @@
-import type { Route, TransportType } from '../api';
+import type { Route, RouteDirection, TransportType } from '../api';
 
 // Pantone-inspired colors spread around the whole color wheel. Pantone does not
 // publish official screen values, so these are sRGB approximations in the spirit of
@@ -41,6 +41,20 @@ export function buildRouteColors(routes: Route[]): Record<string, string> {
     colors[route.id] = PALETTE[(START[route.type] + used[route.type]++) % PALETTE.length];
   }
   return colors;
+}
+
+/** Share of white mixed into a route's color for the way back. */
+const BACK_LIGHTEN = 0.3;
+
+/**
+ * The color of one direction of a route: the route's own color for the forward direction
+ * (and when the direction is unknown), a slightly lighter shade of it for the way back.
+ */
+export function directionColor(hex: string, direction?: RouteDirection): string {
+  if (direction !== 'back') return hex;
+  const channel = (i: number) =>
+    Math.round(parseInt(hex.slice(i, i + 2), 16) * (1 - BACK_LIGHTEN) + 255 * BACK_LIGHTEN);
+  return `#${[1, 3, 5].map((i) => channel(i).toString(16).padStart(2, '0')).join('')}`;
 }
 
 /** White or near-black, whichever reads better on `hex` (WCAG contrast). */
