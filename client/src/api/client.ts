@@ -6,8 +6,10 @@ import type {
   LngLat,
   LocationInfo,
   NewPlace,
+  NewRouteCollection,
   Place,
   Route,
+  RouteCollection,
   SearchResults,
   Stop,
   Unsubscribe,
@@ -30,6 +32,12 @@ export interface TransportClient {
   /** Saving a home or work place replaces the previous one of that kind. */
   savePlace(place: NewPlace): Promise<Place>;
   deletePlace(placeId: string): Promise<void>;
+  /** The user's favourite routes: named collections of routes. */
+  getCollections(): Promise<RouteCollection[]>;
+  saveCollection(collection: NewRouteCollection): Promise<RouteCollection>;
+  /** Renames a collection and replaces its routes. */
+  updateCollection(collection: RouteCollection): Promise<RouteCollection>;
+  deleteCollection(collectionId: string): Promise<void>;
   /** Journeys from one point to another, fastest first (walking and riding legs). */
   planTrip(from: LatLng, to: LatLng): Promise<Itinerary[]>;
   /** Finds street addresses matching free text. */

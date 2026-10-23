@@ -6,8 +6,10 @@ import type {
   LngLat,
   LocationInfo,
   NewPlace,
+  NewRouteCollection,
   Place,
   Route,
+  RouteCollection,
   SearchResults,
   Stop,
   TransportType,
@@ -56,6 +58,16 @@ function loadPlaces(): Place[] {
   }
 }
 
+const COLLECTIONS_KEY = 'mock.collections';
+
+function loadCollections(): RouteCollection[] {
+  try {
+    return JSON.parse(localStorage.getItem(COLLECTIONS_KEY) ?? '[]') as RouteCollection[];
+  } catch {
+    return [];
+  }
+}
+
 interface SimVehicle {
   id: string;
   /** Fake board number. */
@@ -84,6 +96,7 @@ export class MockEasyWayClient implements TransportClient {
   private readonly epoch = Date.now();
   private readonly fleet: SimVehicle[];
   private places: Place[] = loadPlaces();
+  private collections: RouteCollection[] = loadCollections();
 
   constructor({ latencyMs = 150, tickMs = 1000 }: MockOptions = {}) {
     this.latencyMs = latencyMs;
@@ -174,6 +187,32 @@ export class MockEasyWayClient implements TransportClient {
     return this.respond(undefined);
   }
 
+  getCollections(): Promise<RouteCollection[]> {
+    return this.respond([...this.collections]);
+  }
+
+  saveCollection(input: NewRouteCollection): Promise<RouteCollection> {
+    const collection: RouteCollection = {
+      ...input,
+      id: `c-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+    };
+    this.collections = [...this.collections, collection];
+    this.persistCollections();
+    return this.respond(collection);
+  }
+
+  updateCollection(collection: RouteCollection): Promise<RouteCollection> {
+    this.collections = this.collections.map((c) => (c.id === collection.id ? collection : c));
+    this.persistCollections();
+    return this.respond(collection);
+  }
+
+  deleteCollection(collectionId: string): Promise<void> {
+    this.collections = this.collections.filter((c) => c.id !== collectionId);
+    this.persistCollections();
+    return this.respond(undefined);
+  }
+
   geocode(query: string): Promise<GeocodeResult[]> {
     const words = normalize(query.trim()).split(/\s+/).filter(Boolean);
     if (words.length === 0) return this.respond([]);
@@ -233,6 +272,14 @@ export class MockEasyWayClient implements TransportClient {
       localStorage.setItem(PLACES_KEY, JSON.stringify(this.places));
     } catch {
       // storage unavailable; places live in memory only
+    }
+  }
+
+  private persistCollections() {
+    try {
+      localStorage.setItem(COLLECTIONS_KEY, JSON.stringify(this.collections));
+    } catch {
+      // storage unavailable; collections live in memory only
     }
   }
 

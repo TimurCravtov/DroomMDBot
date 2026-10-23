@@ -15,6 +15,7 @@ import { TransitMap } from './components/TransitMap';
 import { useTheme } from './hooks/useTheme';
 import {
   useArrivals,
+  useCollections,
   useRoutePaths,
   useRoutes,
   useSavedPlaces,
@@ -32,6 +33,12 @@ export function App() {
   const [routeIds, setRouteIds] = useState<string[]>([]);
   const [stopId, setStopId] = useState<string | null>(null);
   const { places, save: savePlace, remove: removePlace } = useSavedPlaces();
+  const {
+    collections,
+    save: saveCollection,
+    update: updateCollection,
+    remove: removeCollection,
+  } = useCollections();
   const [focusedPlace, setFocusedPlace] = useState<Place | null>(null);
   // Set while the user is choosing a point on the map; says what the point is for.
   const [pickPurpose, setPickPurpose] = useState<PickPurpose | null>(null);
@@ -195,6 +202,10 @@ export function App() {
             onChange={setRouteIds}
             open={routesOpen}
             onOpenChange={setRoutesOpen}
+            collections={collections}
+            onSaveCollection={(name, routeIds) => saveCollection({ name, routeIds })}
+            onUpdateCollection={updateCollection}
+            onDeleteCollection={removeCollection}
           />
         </div>
 

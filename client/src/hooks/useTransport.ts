@@ -8,8 +8,10 @@ import type {
   LngLat,
   LocationInfo,
   NewPlace,
+  NewRouteCollection,
   Place,
   Route,
+  RouteCollection,
   SearchResults,
   Stop,
   Vehicle,
@@ -146,6 +148,43 @@ export function useSavedPlaces() {
   };
 
   return { places, save, remove };
+}
+
+/** The user's favourite routes: named collections, with save / update / remove helpers. */
+export function useCollections() {
+  const client = useTransportClient();
+  const [collections, setCollections] = useState<RouteCollection[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    client
+      .getCollections()
+      .then((c) => !cancelled && setCollections(c))
+      .catch(() => {}); // favourites are a convenience; the app works without them
+    return () => {
+      cancelled = true;
+    };
+  }, [client]);
+
+  const refresh = async () => setCollections(await client.getCollections());
+
+  const save = async (input: NewRouteCollection) => {
+    const collection = await client.saveCollection(input);
+    await refresh();
+    return collection;
+  };
+
+  const update = async (collection: RouteCollection) => {
+    await client.updateCollection(collection);
+    await refresh();
+  };
+
+  const remove = async (collectionId: string) => {
+    await client.deleteCollection(collectionId);
+    await refresh();
+  };
+
+  return { collections, save, update, remove };
 }
 
 /** Describes a map point (debounced); undefined while loading or when `point` is null. */

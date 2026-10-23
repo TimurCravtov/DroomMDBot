@@ -8,8 +8,10 @@ import type {
   LngLat,
   LocationInfo,
   NewPlace,
+  NewRouteCollection,
   Place,
   Route,
+  RouteCollection,
   SearchResults,
   Stop,
   Unsubscribe,
@@ -17,7 +19,17 @@ import type {
 } from '../types';
 
 /** Browser-local stand-in used for saved places when the server won't sign the user in. */
-type LocalPart = Pick<TransportClient, 'getSavedPlaces' | 'savePlace' | 'deletePlace' | 'search'>;
+type LocalPart = Pick<
+  TransportClient,
+  | 'getSavedPlaces'
+  | 'savePlace'
+  | 'deletePlace'
+  | 'getCollections'
+  | 'saveCollection'
+  | 'updateCollection'
+  | 'deleteCollection'
+  | 'search'
+>;
 
 /** A failed API call, with the HTTP status so callers can tell "not signed in" apart. */
 class HttpError extends Error {
@@ -133,6 +145,56 @@ export class ApiClient implements TransportClient {
       // Not signed in, or the place only ever existed in the local fallback.
       if (isUnauthorized(e) || (e instanceof HttpError && e.status === 404)) {
         return this.local.deletePlace(placeId);
+      }
+      throw e;
+    }
+  }
+
+  async getCollections(): Promise<RouteCollection[]> {
+    try {
+      return await this.json<RouteCollection[]>('/me/collections', { auth: true });
+    } catch (e) {
+      if (isUnauthorized(e)) return this.local.getCollections();
+      throw e;
+    }
+  }
+
+  async saveCollection(collection: NewRouteCollection): Promise<RouteCollection> {
+    try {
+      return await this.json<RouteCollection>('/me/collections', {
+        method: 'POST',
+        body: collection,
+        auth: true,
+      });
+    } catch (e) {
+      if (isUnauthorized(e)) return this.local.saveCollection(collection);
+      throw e;
+    }
+  }
+
+  async updateCollection(collection: RouteCollection): Promise<RouteCollection> {
+    try {
+      return await this.json<RouteCollection>(
+        `/me/collections/${encodeURIComponent(collection.id)}`,
+        { method: 'PUT', body: collection, auth: true },
+      );
+    } catch (e) {
+      if (isUnauthorized(e) || (e instanceof HttpError && e.status === 404)) {
+        return this.local.updateCollection(collection);
+      }
+      throw e;
+    }
+  }
+
+  async deleteCollection(collectionId: string): Promise<void> {
+    try {
+      await this.json<void>(`/me/collections/${encodeURIComponent(collectionId)}`, {
+        method: 'DELETE',
+        auth: true,
+      });
+    } catch (e) {
+      if (isUnauthorized(e) || (e instanceof HttpError && e.status === 404)) {
+        return this.local.deleteCollection(collectionId);
       }
       throw e;
     }

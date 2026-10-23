@@ -63,6 +63,15 @@ export interface Place {
 
 export type NewPlace = Omit<Place, 'id'>;
 
+/** A named list of routes, e.g. the lines taken to work. */
+export interface RouteCollection {
+  id: string;
+  name: string;
+  routeIds: string[];
+}
+
+export type NewRouteCollection = Omit<RouteCollection, 'id'>;
+
 /** One end of a leg. The name is absent for the trip's own start and destination. */
 export interface PlanPlace {
   name?: string;
