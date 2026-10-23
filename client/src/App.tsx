@@ -171,7 +171,8 @@ export function App() {
   return (
     <RouteColorsProvider routes={routes}>
       <div className="relative h-screen w-screen overflow-hidden">
-        <div className="absolute inset-0">
+        {/* z-0 makes the map its own layer, so its markers (which carry z-indexes) stay under the cards. */}
+        <div className="absolute inset-0 z-0">
           <TransitMap
             stops={stops}
             routes={routes}
