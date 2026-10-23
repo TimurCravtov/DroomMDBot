@@ -5,6 +5,7 @@ import { useGeocode, useSearch } from '../hooks/useTransport';
 import { PlaceIcon } from './PlaceIcon';
 import { RouteChecklistItems } from './RouteChecklist';
 import { RouteNumber } from './RouteColors';
+import { ScrollRow } from './ScrollRow';
 import { TypeBadge, TYPE_LABEL } from './TypeBadge';
 import { TypeFilter } from './TypeFilter';
 import { closeButton, hoverRow, mutedText, surface } from './ui';
@@ -201,7 +202,7 @@ export function SearchBar({
         </label>
 
         {expanded && !hasQuery && (
-          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2 pt-2 [scrollbar-width:none]">
+          <ScrollRow className="-mx-1 px-1 pb-2 pt-2">
             <Chip
               icon={<TbDirections className="h-4 w-4" />}
               label="Directions"
@@ -237,7 +238,7 @@ export function SearchBar({
               label="Select on map"
               onClick={() => pick(() => onShortcut('map'))}
             />
-          </div>
+          </ScrollRow>
         )}
 
         {expanded && !hasQuery && suggested.length > 0 && (
