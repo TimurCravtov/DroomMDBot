@@ -16,7 +16,7 @@ import { MAP_STYLES, type MapStyleId } from '../map/mapStyles';
 import { directionColor, readableTextColor } from '../map/routeColors';
 import { provideVehicleArrows, VEHICLE_ARROW_PREFIX } from '../map/vehicleArrows';
 import type { UserLocation } from '../map/types';
-import { TbArrowNarrowRight, TbMapPinFilled } from 'react-icons/tb';
+import { TbMapPinFilled } from 'react-icons/tb';
 import { HeadingArrow } from './HeadingArrow';
 import { PlaceIcon } from './PlaceIcon';
 import { useRouteColors } from './RouteColors';
@@ -507,14 +507,8 @@ export function TransitMap({
           offset={[0, closeEnough ? 16 : 8]}
           style={{ zIndex: 11, pointerEvents: 'none' }}
         >
-          <span className="flex max-w-40 items-center gap-1 rounded bg-white/90 px-1 text-[10px] font-medium leading-4 text-ink-900 shadow dark:bg-ink-800/90 dark:text-white">
-            <span className="shrink-0">{v.label}</span>
-            {v.toward && (
-              <>
-                <TbArrowNarrowRight className="h-3 w-3 shrink-0" />
-                <span className="truncate font-normal">{v.toward}</span>
-              </>
-            )}
+          <span className="rounded bg-white/90 px-1 text-[10px] font-medium leading-4 text-ink-900 shadow dark:bg-ink-800/90 dark:text-white">
+            {v.label}
           </span>
         </Marker>
       ))}
