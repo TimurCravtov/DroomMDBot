@@ -7,11 +7,16 @@ export interface MapStyleOption {
   style: StyleSpecification;
 }
 
+/** West, south, east, north: Moldova with a small margin. The map is not loaded beyond it. */
+export const MOLDOVA_BOUNDS: [number, number, number, number] = [26.4, 45.3, 30.3, 48.7];
+
 /** A style made of a single raster tile layer; needs no API key or vector tile server. */
 function rasterStyle(tiles: string[], attribution: string, maxzoom = 19): StyleSpecification {
   return {
     version: 8,
-    sources: { base: { type: 'raster', tiles, tileSize: 256, maxzoom, attribution } },
+    sources: {
+      base: { type: 'raster', tiles, tileSize: 256, maxzoom, attribution, bounds: MOLDOVA_BOUNDS },
+    },
     layers: [{ id: 'base', type: 'raster', source: 'base' }],
   };
 }

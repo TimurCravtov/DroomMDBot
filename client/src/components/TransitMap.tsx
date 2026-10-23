@@ -12,7 +12,7 @@ import {
 import type { Itinerary, Place, Route, RoutePath, Stop, TransportType, Vehicle } from '../api';
 import { useLabels } from '../hooks/useLabels';
 import { useI18n } from '../i18n';
-import { MAP_STYLES, type MapStyleId } from '../map/mapStyles';
+import { MAP_STYLES, MOLDOVA_BOUNDS, type MapStyleId } from '../map/mapStyles';
 import { directionColor, readableTextColor } from '../map/routeColors';
 import { provideVehicleArrows, VEHICLE_ARROW_PREFIX } from '../map/vehicleArrows';
 import type { UserLocation } from '../map/types';
@@ -283,6 +283,9 @@ export function TransitMap({
       initialViewState={{ longitude: CHISINAU[0], latitude: CHISINAU[1], zoom: 14 }}
       mapStyle={(MAP_STYLES.find((s) => s.id === mapStyleId) ?? MAP_STYLES[0]).style}
       maxPitch={0}
+      // Neither panning nor zooming out can leave Moldova.
+      maxBounds={MOLDOVA_BOUNDS}
+      minZoom={7}
       // Credits live in <MapCredits>: a tiny © that opens the full list.
       attributionControl={false}
       interactiveLayerIds={[STOPS_LAYER, ...VEHICLE_LAYERS]}
