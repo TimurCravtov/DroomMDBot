@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Layer, Marker, Source } from 'react-map-gl/maplibre';
 import { TbNavigationFilled, TbUserFilled } from 'react-icons/tb';
+import { useMapBearing } from '../hooks/useMapBearing';
 import type { UserLocation } from '../map/types';
 
 type LngLat = [number, number];
@@ -28,6 +29,7 @@ function circleRing(lng: number, lat: number, radiusM: number, steps = 48): LngL
  */
 export function UserLocationMarker({ location }: { location: UserLocation }) {
   const { lng, lat, accuracy, heading } = location;
+  const mapBearing = useMapBearing();
   const showAccuracy = accuracy >= MIN_ACCURACY_M && accuracy <= MAX_ACCURACY_M;
   const hasHeading = typeof heading === 'number' && Number.isFinite(heading);
 
@@ -64,8 +66,9 @@ export function UserLocationMarker({ location }: { location: UserLocation }) {
             {hasHeading ? (
               <TbNavigationFilled
                 className="h-4 w-4"
-                // Tabler's arrow points north-east, hence the 45° correction.
-                style={{ transform: `rotate(${heading - 45}deg)` }}
+                // Tabler's arrow points north-east, hence the 45° correction; the marker
+                // stays upright when the map turns, hence the map's rotation.
+                style={{ transform: `rotate(${heading - mapBearing - 45}deg)` }}
               />
             ) : (
               <TbUserFilled className="h-4 w-4" />
