@@ -90,3 +90,37 @@ func TestBearingAtFollowsTheLine(t *testing.T) {
 		t.Errorf("bearing on the northbound part = %.1f, want ~0", b)
 	}
 }
+
+// An L-shaped line: 500 m east, then 500 m north.
+func lShapedLine() *Polyline {
+	corner := Point{47, 28.80}
+	// 500 m of longitude at latitude 47 is about 0.00659 degrees.
+	return NewPolyline([]Point{{47, 28.80 - 0.00659}, corner, {47 + 0.0045, 28.80}})
+}
+
+func TestBearingAheadLooksPastTheTurn(t *testing.T) {
+	line := lShapedLine()
+	// 40 m before the corner the road still runs east, but 100 m ahead lies beyond the
+	// corner, so the arrow already leans north.
+	d := line.cum[1] - 40
+	if got := line.BearingAt(d); math.Abs(got-90) > 1 {
+		t.Fatalf("local bearing = %.1f, want 90 (east)", got)
+	}
+	if got := line.BearingAhead(d, 100); got < 10 || got > 60 {
+		t.Errorf("bearing ahead = %.1f, want somewhere between east and north", got)
+	}
+	// Far from the corner both agree.
+	if got := line.BearingAhead(100, 100); math.Abs(got-90) > 1 {
+		t.Errorf("bearing ahead on the straight = %.1f, want 90", got)
+	}
+}
+
+func TestBearingAheadAtTheEndFallsBackToTheLocalDirection(t *testing.T) {
+	line := eastLine()
+	if got := line.BearingAhead(line.Length(), 100); math.Abs(got-90) > 1 {
+		t.Errorf("bearing at the end = %.1f, want 90", got)
+	}
+	if got := line.BearingAhead(line.Length()-3, 100); math.Abs(got-90) > 1 {
+		t.Errorf("bearing 3 m from the end = %.1f, want 90", got)
+	}
+}

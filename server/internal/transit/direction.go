@@ -10,12 +10,17 @@ import (
 // the vehicle to count as travelling along it.
 const maxHeadingOffDeg = 60
 
+// lookaheadM is how far ahead along its route a vehicle's arrow looks: it points at the
+// spot on the route this far in front of the vehicle, not at its destination and not at
+// the few meters right under its wheels, so it is steady on curves and noisy GPS fixes.
+const lookaheadM = 100
+
 // Orientation is how a vehicle sits on its route.
 type Orientation struct {
 	Direction string // DirectionForward or DirectionBack; empty when unknown
 	Toward    string // the destination
-	// Bearing is the route's direction of travel at the vehicle's position, in degrees
-	// clockwise from north. It is only meaningful when OnRoute.
+	// Bearing is the direction from the vehicle's place on the route to the spot lookaheadM
+	// further along it, in degrees clockwise from north. It is only meaningful when OnRoute.
 	Bearing float64
 	OnRoute bool
 }
@@ -33,7 +38,7 @@ func (d *Dataset) DirectionOf(v LiveVehicle, headingKnown bool) Orientation {
 		o := Orientation{Direction: tr.direction, Toward: tr.toward}
 		if tr.line != nil {
 			if offset, dist, _ := tr.line.Project(pos, 0); dist <= maxOffRouteM {
-				o.Bearing, o.OnRoute = tr.line.BearingAt(offset), true
+				o.Bearing, o.OnRoute = tr.line.BearingAhead(offset, lookaheadM), true
 			}
 		}
 		return o
@@ -52,11 +57,14 @@ func (d *Dataset) DirectionOf(v LiveVehicle, headingKnown bool) Orientation {
 		if dist > maxOffRouteM || dist >= bestDist {
 			continue
 		}
-		bearing := tr.line.BearingAt(offset)
-		if angleBetween(bearing, v.Heading) > maxHeadingOffDeg {
+		// Whether it moves along the shape is judged by the shape right under it.
+		if angleBetween(tr.line.BearingAt(offset), v.Heading) > maxHeadingOffDeg {
 			continue // not clearly moving along this shape (across it, or the other way)
 		}
-		best, bestDist = Orientation{Direction: tr.direction, Toward: tr.toward, Bearing: bearing, OnRoute: true}, dist
+		best, bestDist = Orientation{
+			Direction: tr.direction, Toward: tr.toward,
+			Bearing: tr.line.BearingAhead(offset, lookaheadM), OnRoute: true,
+		}, dist
 	}
 	return best
 }

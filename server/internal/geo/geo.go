@@ -89,6 +89,22 @@ func (l *Polyline) BearingAt(d float64) float64 {
 	return Bearing(l.pointAt(d-5), l.pointAt(d+5))
 }
 
+// minChordM is the shortest stretch BearingAhead will take a direction from; over less than
+// this (the end of a line, a tight hairpin) the points are too close to give a direction.
+const minChordM = 10
+
+// BearingAhead is the direction from the point d meters along the line to the point
+// `ahead` meters further on, in degrees clockwise from north. Looking some way ahead
+// instead of at the exact spot smooths out kinks in the shape. Where there is no such
+// stretch (the end of the line) it falls back to the direction right at d.
+func (l *Polyline) BearingAhead(d, ahead float64) float64 {
+	from, to := l.pointAt(d), l.pointAt(d+ahead)
+	if Haversine(from, to) < minChordM {
+		return l.BearingAt(d)
+	}
+	return Bearing(from, to)
+}
+
 // pointAt returns the point d meters along the line (clamped to its ends).
 func (l *Polyline) pointAt(d float64) Point {
 	n := len(l.pts)
