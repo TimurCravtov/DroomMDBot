@@ -2,6 +2,8 @@
 interface TelegramWebApp {
   /** Signed launch data; empty when the page is not opened inside Telegram. */
   initData: string;
+  /** The same data, unverified: fine for the interface language, never for identity. */
+  initDataUnsafe?: { user?: { language_code?: string } };
   ready(): void;
   expand(): void;
 }
