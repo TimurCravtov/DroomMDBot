@@ -71,7 +71,7 @@ export const ru: Record<MessageKey, Message> = {
 
   'fav.form': 'Сохранить выбранные маршруты в избранное',
   'fav.namePlaceholder': 'Название, напр. На работу',
-  'fav.selectToSave': 'Выберите маршруты, чтобы сохранить',
+  'fav.selectToSave': 'Выберите маршруты',
   'fav.saveCount': 'Сохранить ({count})',
   'fav.search': 'Поиск в избранном',
   'fav.noMatch': 'В избранном ничего не найдено.',
@@ -111,7 +111,7 @@ export const ru: Record<MessageKey, Message> = {
   'pick.useThis': 'Выбрать эту точку',
   'pick.saveHere': 'Сохранить здесь',
 
-  'directions.title': 'Маршрут',
+  'directions.title': 'Как добраться',
   'directions.close': 'Закрыть построение маршрута',
   'directions.backToList': 'Назад к списку вариантов',
   'directions.otherRoutes': 'Другие варианты',

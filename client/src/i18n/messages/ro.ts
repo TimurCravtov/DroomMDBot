@@ -71,7 +71,7 @@ export const ro: Record<MessageKey, Message> = {
 
   'fav.form': 'Salvează rutele alese ca favorită',
   'fav.namePlaceholder': 'Nume, ex. La serviciu',
-  'fav.selectToSave': 'Alege rute ca să le salvezi',
+  'fav.selectToSave': 'Alege rute întâi',
   'fav.saveCount': 'Salvează ({count})',
   'fav.search': 'Caută în favorite',
   'fav.noMatch': 'Nicio favorită nu corespunde căutării.',

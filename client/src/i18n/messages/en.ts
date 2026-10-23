@@ -85,7 +85,7 @@ export const en = {
 
   'fav.form': 'Save selected routes as a favourite',
   'fav.namePlaceholder': 'Name, e.g. To work',
-  'fav.selectToSave': 'Select routes to save them',
+  'fav.selectToSave': 'Select routes first',
   'fav.saveCount': 'Save ({count})',
   'fav.search': 'Search favourites',
   'fav.noMatch': 'No favourites match your search.',
