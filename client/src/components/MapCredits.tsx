@@ -10,7 +10,9 @@ interface Props {
 /** Credit strings contain links; open them in a new tab. */
 const withBlankLinks = (html: string) => html.replace(/<a /g, '<a target="_blank" rel="noreferrer" ');
 
-const linkClass = '[&_a]:underline [&_a]:underline-offset-2';
+const REPO_URL = 'https://github.com/TimurCravtov/DroomMDBot';
+
+const linkClass ='[&_a]:underline [&_a]:underline-offset-2';
 
 /**
  * A round © button in the corner, the size of the other map buttons, that opens the credits for everything on the map: the base
@@ -93,6 +95,15 @@ export function MapCredits({ mapStyleId }: Props) {
                 <a href="https://maplibre.org" target="_blank" rel="noreferrer">
                   MapLibre GL JS
                 </a>
+              </dd>
+            </div>
+            <div>
+              <dt className={mutedText}>Source code</dt>
+              <dd>
+                <a href={REPO_URL} target="_blank" rel="noreferrer">
+                  TimurCravtov/DroomMDBot
+                </a>{' '}
+                (MIT)
               </dd>
             </div>
           </dl>
