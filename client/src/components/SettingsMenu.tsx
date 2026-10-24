@@ -66,7 +66,7 @@ function Segmented<T extends string>({
 }
 
 /**
- * Gear button that opens the settings panel: a sheet over the map with the theme, the
+ * Gear button that opens the settings panel: a full-height window over the map with the theme, the
  * interface language, the base map and a few words about the app.
  */
 export function SettingsMenu({ theme, onThemeChange, mapStyleId, onMapStyleChange }: Props) {
@@ -115,7 +115,7 @@ export function SettingsMenu({ theme, onThemeChange, mapStyleId, onMapStyleChang
       {/* In the body, so the sheet covers the search bar and the other floating controls. */}
       {open &&
         createPortal(
-          <div className="fixed inset-0 z-[2000] flex items-end justify-center sm:items-center">
+          <div className="fixed inset-0 z-[2000] flex justify-start">
             <div
               aria-hidden
               className="absolute inset-0 bg-ink-900/40 backdrop-blur-[1px]"
@@ -125,9 +125,9 @@ export function SettingsMenu({ theme, onThemeChange, mapStyleId, onMapStyleChang
               role="dialog"
               aria-modal="true"
               aria-labelledby="settings-title"
-              className={`relative flex max-h-[85vh] w-full flex-col rounded-t-3xl shadow-2xl sm:max-w-md sm:rounded-3xl ${surface}`}
+              className={`relative flex h-full w-full flex-col shadow-2xl sm:max-w-md sm:rounded-r-3xl ${surface}`}
             >
-              <div className="flex items-center justify-between px-5 pb-2 pt-4">
+              <div className="flex shrink-0 items-center justify-between border-b border-ink-200 px-5 py-3 dark:border-ink-700">
                 <h2 id="settings-title" className="text-lg font-semibold">
                   {t('settings.title')}
                 </h2>
@@ -141,7 +141,7 @@ export function SettingsMenu({ theme, onThemeChange, mapStyleId, onMapStyleChang
                 </button>
               </div>
 
-              <div className="space-y-5 overflow-y-auto px-5 pb-6 pt-2">
+              <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 pb-6 pt-4">
                 <Section title={t('settings.appearance')}>
                   <Segmented
                     label={t('settings.theme')}
