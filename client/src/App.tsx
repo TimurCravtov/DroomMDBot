@@ -267,7 +267,13 @@ export function App() {
           <div
             className={`pointer-events-none absolute inset-x-4 top-[4.75rem] z-[1000] flex justify-center ${hideWhenSearching}`}
           >
-            <div className="pointer-events-auto max-w-full">
+            {/* Faded out is not enough: this layer sits over the search shortcuts, so it
+                must stop catching clicks too, or a tap on "Home" lands on an invisible chip. */}
+            <div
+              className={`max-w-full ${
+                searchOpen || picking || directionsOpen ? 'pointer-events-none' : 'pointer-events-auto'
+              }`}
+            >
               <SelectedRoutes
                 routes={selectedRoutes}
                 routePaths={routePaths}
